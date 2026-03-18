@@ -1,0 +1,122 @@
+@import url("../app/globals.css");
+
+.navbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    background: rgba(253, 250, 244, 0.88);
+    backdrop-filter: blur(14px);
+    border-bottom: 1px solid rgba(168, 196, 176, 0.2);
+    padding: 0 24px;
+}
+
+.inner {
+    max-width: 1160px;
+    margin: 0 auto;
+    height: 68px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.logo {
+    font-family: var(--font-lora), serif;
+    font-size: 1.45rem;
+    font-weight: 700;
+    color: var(--sage);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.logo span {
+    font-size: 1.3rem;
+}
+
+.links {
+    display: flex;
+    align-items: center;
+    gap: 32px;
+}
+
+.link {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-mid);
+    transition: color var(--transition);
+}
+
+.link:hover {
+    color: var(--sage);
+}
+
+.cta {
+    background: var(--sage);
+    color: #fff;
+    padding: 10px 22px;
+    border-radius: 999px;
+    font-size: 0.88rem;
+    font-weight: 700;
+    transition: background var(--transition);
+}
+
+.cta:hover {
+    background: #5f8a70;
+}
+
+.hamburger {
+    display: none;
+    flex-direction: column;
+    gap: 5px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+}
+
+.hamburger span {
+    display: block;
+    width: 24px;
+    height: 2px;
+    background: var(--text-dark);
+    border-radius: 2px;
+    transition: var(--transition);
+}
+
+@media (max-width: 768px) {
+    .links {
+        display: none;
+    }
+
+    .hamburger {
+        display: flex;
+    }
+}
+
+/* Mobile Menu */
+.mobileMenu {
+    position: fixed;
+    top: 68px;
+    left: 0;
+    right: 0;
+    background: var(--cream);
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    border-bottom: 1px solid var(--beige-dark);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-100%);
+    opacity: 0;
+    transition: var(--transition);
+    z-index: 90;
+    pointer-events: none;
+}
+
+.mobileMenu.active {
+    transform: translateY(0);
+    opacity: 1;
+    pointer-events: auto;
+}

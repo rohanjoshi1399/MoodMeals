@@ -1,0 +1,187 @@
+@import url("../app/globals.css");
+
+.section {
+    padding: 80px 0;
+    text-align: center;
+}
+
+.title {
+    font-family: var(--font-lora), serif;
+    font-size: 2.5rem;
+    margin-bottom: 32px;
+    color: var(--text-dark);
+}
+
+/* AI Analysis Result Header */
+.analysisResult {
+    margin-bottom: 36px;
+}
+
+.emotion {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-dark);
+    background: white;
+    border: 1.5px solid var(--sage);
+    border-radius: 999px;
+    padding: 8px 24px;
+    margin-bottom: 16px;
+}
+
+.aiMessage {
+    font-size: 1.1rem;
+    font-style: italic;
+    color: var(--text-mid);
+    max-width: 640px;
+    margin: 0 auto;
+    line-height: 1.7;
+}
+
+.filterNote {
+    font-size: 0.9rem;
+    color: var(--sage);
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+/* Preference Selector */
+.selector {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+}
+
+.btn {
+    padding: 12px 24px;
+    border-radius: 999px;
+    font-weight: 600;
+    transition: all var(--transition);
+    border: 2px solid var(--beige-dark);
+    font-size: 0.95rem;
+    background: transparent;
+    cursor: pointer;
+}
+
+.btn:hover {
+    border-color: var(--sage);
+    background-color: var(--sage-pale);
+}
+
+.active {
+    background-color: var(--sage);
+    color: #fff;
+    border-color: var(--sage);
+    box-shadow: 0 4px 16px rgba(122, 158, 135, 0.3);
+}
+
+/* Meal Grid */
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 32px;
+    margin-top: 40px;
+}
+
+/* Card */
+.card {
+    background: #fff;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    border: 1.5px solid rgba(168, 196, 176, 0.2);
+    transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
+    text-align: left;
+    position: relative;
+}
+
+.card:hover {
+    transform: translateY(-8px);
+    box-shadow: var(--shadow-md);
+}
+
+.recommended {
+    border-color: var(--sage);
+    box-shadow: 0 0 0 3px rgba(122, 158, 135, 0.15);
+}
+
+.recommendedBadge {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    background: var(--sage);
+    color: white;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 4px 12px;
+    border-radius: 999px;
+    z-index: 2;
+    letter-spacing: 0.03em;
+}
+
+.imgWrap {
+    position: relative;
+    height: 220px;
+}
+
+.img {
+    object-fit: cover;
+}
+
+.cardBody {
+    padding: 24px;
+}
+
+.cardTitle {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: var(--text-dark);
+}
+
+.cardDesc {
+    font-size: 0.92rem;
+    color: var(--text-mid);
+    margin-bottom: 16px;
+    line-height: 1.65;
+}
+
+.cardFooter {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.moodTags {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.moodTag {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background: var(--sage-pale);
+    color: var(--sage);
+    padding: 3px 10px;
+    border-radius: 999px;
+    transition: all var(--transition);
+}
+
+.moodTagActive {
+    background: var(--sage);
+    color: white;
+}
+
+.calories {
+    font-size: 0.85rem;
+    color: var(--text-light);
+    font-weight: 600;
+    white-space: nowrap;
+}

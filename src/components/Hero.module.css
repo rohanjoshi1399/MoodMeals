@@ -1,0 +1,223 @@
+.hero {
+    padding-top: 140px;
+    padding-bottom: 80px;
+    background: linear-gradient(160deg, var(--cream) 0%, var(--sage-pale) 55%, var(--beige) 100%);
+    position: relative;
+    overflow: hidden;
+}
+
+.hero::before {
+    content: '';
+    position: absolute;
+    top: -120px;
+    right: -120px;
+    width: 500px;
+    height: 500px;
+    background: radial-gradient(circle, rgba(168, 196, 176, 0.35) 0%, transparent 70%);
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.hero::after {
+    content: '';
+    position: absolute;
+    bottom: -80px;
+    left: -80px;
+    width: 380px;
+    height: 380px;
+    background: radial-gradient(circle, rgba(232, 211, 192, 0.4) 0%, transparent 70%);
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.inner {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: center;
+    gap: 64px;
+}
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    color: var(--sage);
+    background: #fff;
+    border: 1.5px solid var(--sage-pale);
+    padding: 7px 16px;
+    border-radius: 999px;
+    margin-bottom: 24px;
+    box-shadow: var(--shadow-sm);
+}
+
+.dot {
+    width: 7px;
+    height: 7px;
+    background: var(--sage);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1
+    }
+
+    50% {
+        opacity: 0.4
+    }
+}
+
+.headline {
+    font-family: var(--font-lora), serif;
+    font-size: clamp(2.6rem, 5.5vw, 4.2rem);
+    font-weight: 700;
+    line-height: 1.12;
+    color: var(--text-dark);
+    margin-bottom: 22px;
+}
+
+.headline em {
+    font-style: italic;
+    color: var(--sage);
+}
+
+.copy {
+    font-size: 1.1rem;
+    color: var(--text-mid);
+    max-width: 480px;
+    margin-bottom: 38px;
+    line-height: 1.75;
+}
+
+.actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    align-items: center;
+}
+
+.btnPrimary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--sage);
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.95rem;
+    padding: 15px 30px;
+    border-radius: 999px;
+    transition: all var(--transition);
+    box-shadow: 0 4px 20px rgba(122, 158, 135, 0.35);
+}
+
+.btnPrimary:hover {
+    background: #5f8a70;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 28px rgba(122, 158, 135, 0.45);
+}
+
+.btnSecondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: transparent;
+    color: var(--text-mid);
+    font-weight: 600;
+    font-size: 0.95rem;
+    padding: 14px 26px;
+    border-radius: 999px;
+    border: 1.5px solid var(--beige-dark);
+    transition: all var(--transition);
+}
+
+.btnSecondary:hover {
+    border-color: var(--sage-light);
+    background: var(--sage-pale);
+    transform: translateY(-2px);
+}
+
+.visual {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.imgWrap {
+    width: 100%;
+    max-width: 480px;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-lg);
+    position: relative;
+}
+
+/* Floating chips */
+.chip {
+    position: absolute;
+    background: #fff;
+    border-radius: var(--radius-md);
+    padding: 10px 16px;
+    box-shadow: var(--shadow-md);
+    font-size: 0.82rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    animation: float 4s ease-in-out infinite;
+    z-index: 10;
+}
+
+.chipOne {
+    top: 12%;
+    left: -14%;
+    animation-delay: 1.5s;
+}
+
+.chipTwo {
+    bottom: 16%;
+    right: -12%;
+    animation-delay: 0.8s;
+}
+
+@keyframes float {
+
+    0%,
+    100% {
+        transform: translateY(0)
+    }
+
+    50% {
+        transform: translateY(-8px)
+    }
+}
+
+@media (max-width: 900px) {
+    .inner {
+        grid-template-columns: 1fr;
+        text-align: center;
+        gap: 48px;
+    }
+
+    .copy {
+        margin: 0 auto 38px;
+    }
+
+    .actions {
+        justify-content: center;
+    }
+
+    .chipOne {
+        left: -5%;
+    }
+
+    .chipTwo {
+        right: -5%;
+    }
+}
