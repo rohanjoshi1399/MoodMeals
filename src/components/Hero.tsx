@@ -4,13 +4,19 @@ import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import styles from "./Hero.module.css";
+import { useMood } from "../context/MoodContext";
 
 const Hero = () => {
     const [showPreferences, setShowPreferences] = useState(false);
+    const { setPreference } = useMood();
 
     const handleStart = () => {
         setShowPreferences(true);
-        // Scroll to the recipes section or just show choices here
+    };
+
+    const handleSelectPreference = (p: any) => {
+        setPreference(p);
+        document.getElementById("recipes")?.scrollIntoView({ behavior: "smooth" });
     };
 
     return (
@@ -44,15 +50,27 @@ const Hero = () => {
                             <div style={{ animation: "fadeIn 0.5s ease-out" }}>
                                 <p style={{ fontWeight: 700, marginBottom: "16px", color: "var(--text-dark)" }}>Choose your dietary path:</p>
                                 <div className={styles.actions}>
-                                    <Link href="#recipes" className={styles.btnPrimary} style={{ background: "var(--sage-light)" }}>
+                                    <button
+                                        onClick={() => handleSelectPreference("veg")}
+                                        className={styles.btnPrimary}
+                                        style={{ background: "var(--sage-light)", border: "none" }}
+                                    >
                                         🥗 Veg
-                                    </Link>
-                                    <Link href="#recipes" className={styles.btnPrimary} style={{ background: "var(--coral-light)" }}>
+                                    </button>
+                                    <button
+                                        onClick={() => handleSelectPreference("non-veg")}
+                                        className={styles.btnPrimary}
+                                        style={{ background: "var(--coral-light)", border: "none" }}
+                                    >
                                         🍗 Non-Veg
-                                    </Link>
-                                    <Link href="#recipes" className={styles.btnPrimary} style={{ background: "var(--lavender)" }}>
+                                    </button>
+                                    <button
+                                        onClick={() => handleSelectPreference("vegan")}
+                                        className={styles.btnPrimary}
+                                        style={{ background: "var(--lavender)", border: "none" }}
+                                    >
                                         🌱 Vegan
-                                    </Link>
+                                    </button>
                                 </div>
                             </div>
                         )}
