@@ -165,6 +165,8 @@ export async function POST(req: NextRequest) {
         mood?: unknown;
         inputMode?: unknown;
         sustainChoice?: unknown;
+        audio?: unknown;
+        mimeType?: unknown;
     };
 
     const typedBody = body as AnalyzeMoodRequestBody | null;
@@ -172,6 +174,8 @@ export async function POST(req: NextRequest) {
     const mood = typedBody?.mood;
     const inputMode = typedBody?.inputMode;
     const sustainChoice = typedBody?.sustainChoice;
+    const audio = typeof typedBody?.audio === "string" ? typedBody.audio : undefined;
+    const mimeType = typeof typedBody?.mimeType === "string" ? typedBody.mimeType : undefined;
 
     if (!mood || typeof mood !== "string") {
         return NextResponse.json({ error: "Mood text is required.", requestId }, { status: 400 });
@@ -193,8 +197,7 @@ export async function POST(req: NextRequest) {
     // If key is missing or is placeholder, use local engine immediately
     if (isMockKey) {
         console.log(
-            `[analyze-mood] requestId=${requestId} inputMode=${inputMode ?? "unknown"} sustainChoice=${
-                sustainChoice ?? "unknown"
+            `[analyze-mood] requestId=${requestId} inputMode=${inputMode ?? "unknown"} sustainChoice=${sustainChoice ?? "unknown"
             } -> using local heuristic (missing/placeholder key)`
         );
         return NextResponse.json({ ...localFallback, requestId });
@@ -204,8 +207,8 @@ export async function POST(req: NextRequest) {
         const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
-        const prompt = `
-You are a nutritional mood expert. User's mood: "${trimmedMood}"
+        const promptText = `
+You are a nutritional mood expert. ${audio ? "The user provided an audio recording of their mood." : `User's mood: "${trimmedMood}"`}
 Respond ONLY with valid JSON (no markdown):
 {
   "emotion": "<stressed | tired | happy | focused | sad | energetic | calm>",
@@ -215,11 +218,21 @@ Respond ONLY with valid JSON (no markdown):
 }
 `;
 
+        const parts: any[] = [{ text: promptText }];
+        if (audio && mimeType) {
+            parts.push({
+                inlineData: {
+                    data: audio,
+                    mimeType: mimeType
+                }
+            });
+        }
+
         console.log(
-            `[analyze-mood] requestId=${requestId} inputMode=${inputMode ?? "unknown"} sustainChoice=${sustainChoice ?? "unknown"} -> calling Gemini`
+            `[analyze-mood] requestId=${requestId} inputMode=${inputMode ?? "unknown"} sustainChoice=${sustainChoice ?? "unknown"} hasAudio=${!!audio} -> calling Gemini`
         );
 
-        const result = await model.generateContent(prompt);
+        const result = await model.generateContent(parts);
         const text = result.response.text().trim();
         const cleaned = text.replace(/^```json?\n?/, "").replace(/```$/, "").trim();
 

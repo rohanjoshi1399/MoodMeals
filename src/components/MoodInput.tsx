@@ -4,7 +4,9 @@ import React, { useState } from "react";
 import { useMood, MoodAnalysis } from "../context/MoodContext";
 import styles from "./MoodInput.module.css";
 
-type MoodInputMode = "text" | "sliders";
+import VoiceRecorder from "./VoiceRecorder";
+
+type MoodInputMode = "text" | "sliders" | "voice";
 type SustainChoice = "sustain" | "wind_down";
 
 const deriveKeywordsFromSliders = (values: {
@@ -43,6 +45,7 @@ const MoodInput = () => {
     const [mode, setMode] = useState<MoodInputMode>("text");
     const [sustainChoice, setSustainChoice] = useState<SustainChoice>("sustain");
     const [text, setText] = useState("");
+    const [voiceData, setVoiceData] = useState<{ base64: string; mimeType: string } | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
     const { setAnalysis, preference, setPreference } = useMood();
@@ -51,14 +54,27 @@ const MoodInput = () => {
     const [energy, setEnergy] = useState(55);
     const [calm, setCalm] = useState(45);
 
+    const handleVoiceComplete = (base64: string, mimeType: string) => {
+        setVoiceData({ base64, mimeType });
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        const isVoice = mode === "voice";
+        if (isVoice && !voiceData) {
+            setError("Please record your mood first.");
+            return;
+        }
+
         const moodText =
             mode === "text"
                 ? text.trim()
-                : deriveKeywordsFromSliders({ stress, energy, calm, sustainChoice });
+                : mode === "sliders"
+                    ? deriveKeywordsFromSliders({ stress, energy, calm, sustainChoice })
+                    : "Analyze this voice recording for mood."; // Fallback text for voice mode
 
-        if (!moodText || !moodText.trim()) return;
+        if (!isVoice && (!moodText || !moodText.trim())) return;
 
         setLoading(true);
         setError("");
@@ -68,11 +84,12 @@ const MoodInput = () => {
             const res = await fetch("/api/analyze-mood", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                // Keep the existing API contract (`{ mood }`) but include extra fields for future use.
                 body: JSON.stringify({
                     mood: moodText,
                     inputMode: mode,
                     sustainChoice,
+                    audio: voiceData?.base64,
+                    mimeType: voiceData?.mimeType,
                 }),
             });
 
@@ -83,6 +100,7 @@ const MoodInput = () => {
 
             const data: MoodAnalysis = await res.json();
             setAnalysis(data);
+            setVoiceData(null); // Reset after success
 
             // Scroll to the meal grid after a brief pause
             setTimeout(() => {
@@ -114,16 +132,23 @@ const MoodInput = () => {
                             <button
                                 type="button"
                                 className={`${styles.prefBtn} ${mode === "text" ? styles.prefActive : ""}`}
-                                onClick={() => setMode("text")}
+                                onClick={() => { setMode("text"); setVoiceData(null); }}
                             >
                                 Free text
                             </button>
                             <button
                                 type="button"
                                 className={`${styles.prefBtn} ${mode === "sliders" ? styles.prefActive : ""}`}
-                                onClick={() => setMode("sliders")}
+                                onClick={() => { setMode("sliders"); setVoiceData(null); }}
                             >
                                 Mood sliders
+                            </button>
+                            <button
+                                type="button"
+                                className={`${styles.prefBtn} ${mode === "voice" ? styles.prefActive : ""}`}
+                                onClick={() => setMode("voice")}
+                            >
+                                🎙️ Voice check-in
                             </button>
                         </div>
                     </div>
@@ -137,7 +162,7 @@ const MoodInput = () => {
                                 onChange={(e) => setText(e.target.value)}
                                 disabled={loading}
                             />
-                        ) : (
+                        ) : mode === "sliders" ? (
                             <div className={styles.sliderBlock} aria-label="Mood sliders">
                                 <div className={styles.sliderRow}>
                                     <div className={styles.sliderMeta}>
@@ -191,6 +216,22 @@ const MoodInput = () => {
                                     We’ll translate these sliders into the mood vocabulary the meal recommender understands.
                                 </p>
                             </div>
+                        ) : (
+                            <div className={styles.voiceBlock}>
+                                <VoiceRecorder
+                                    onRecordingComplete={handleVoiceComplete}
+                                    disabled={loading}
+                                    onRecordingStart={() => setError("")}
+                                />
+                                {voiceData && (
+                                    <div className={styles.voiceReady}>
+                                        ✅ Voice log ready! Click below to analyze.
+                                    </div>
+                                )}
+                                <p className={styles.sliderHint} style={{ marginTop: "1rem" }}>
+                                    Speak naturally about your day and how you feel. Our AI will listen to your tone and words to find the perfect meal.
+                                </p>
+                            </div>
                         )}
 
                         <div className={styles.controls}>
@@ -233,7 +274,7 @@ const MoodInput = () => {
                             <button
                                 type="submit"
                                 className={styles.submitBtn}
-                                disabled={loading || (mode === "text" ? !text.trim() : false)}
+                                disabled={loading || (mode === "text" ? !text.trim() : mode === "voice" ? !voiceData : false)}
                             >
                                 {loading ? "Analyzing..." : "Analyze Mood →"}
                             </button>
