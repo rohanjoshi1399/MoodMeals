@@ -4,11 +4,13 @@ import React, { useState } from "react";
 import { useMood, MoodAnalysis } from "../context/MoodContext";
 import styles from "./MoodInput.module.css";
 
+const SUSTAIN_TRIGGER_EMOTIONS = new Set(["happy", "energetic"]);
+
 const MoodInput = () => {
     const [text, setText] = useState("");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
-    const { setAnalysis, preference, setPreference } = useMood();
+    const { setAnalysis, analysis, preference, setPreference, sustainMode, setSustainMode } = useMood();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -18,6 +20,7 @@ const MoodInput = () => {
         setLoading(true);
         setError("");
         setAnalysis(null);
+        setSustainMode(null);
 
         try {
             const res = await fetch("/api/analyze-mood", {
@@ -45,6 +48,8 @@ const MoodInput = () => {
             setLoading(false);
         }
     };
+
+    const showSustainToggle = analysis && SUSTAIN_TRIGGER_EMOTIONS.has(analysis.emotion);
 
     return (
         <section id="mood-log" className={styles.section}>
@@ -92,6 +97,30 @@ const MoodInput = () => {
                         </div>
                     </form>
                 </div>
+
+                {showSustainToggle && (
+                    <div className={styles.sustainToggle}>
+                        <p className={styles.sustainLabel}>
+                            You're feeling {analysis.emotion}! Want to keep the energy going or ease into rest?
+                        </p>
+                        <div className={styles.sustainBtns}>
+                            <button
+                                type="button"
+                                className={`${styles.sustainBtn} ${sustainMode === "sustain" ? styles.sustainActive : ""}`}
+                                onClick={() => setSustainMode(sustainMode === "sustain" ? null : "sustain")}
+                            >
+                                🚀 Sustain
+                            </button>
+                            <button
+                                type="button"
+                                className={`${styles.sustainBtn} ${sustainMode === "winddown" ? styles.winddownActive : ""}`}
+                                onClick={() => setSustainMode(sustainMode === "winddown" ? null : "winddown")}
+                            >
+                                😌 Wind Down
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
         </section>
     );

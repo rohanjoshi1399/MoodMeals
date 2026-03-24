@@ -161,6 +161,57 @@
     background: #d9534f;
 }
 
+/* Sustain / Wind Down toggle */
+.sustainToggle {
+    margin-top: 28px;
+    text-align: center;
+}
+
+.sustainLabel {
+    font-size: 0.95rem;
+    color: var(--text-mid);
+    margin-bottom: 14px;
+    font-style: italic;
+}
+
+.sustainBtns {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.sustainBtn {
+    padding: 10px 28px;
+    border-radius: 999px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    border: 2px solid var(--beige-dark);
+    background: transparent;
+    cursor: pointer;
+    transition: all var(--transition);
+    color: var(--text-mid);
+}
+
+.sustainBtn:hover {
+    border-color: var(--sage);
+    background: var(--sage-pale);
+}
+
+.sustainActive {
+    background: var(--sage);
+    color: white;
+    border-color: var(--sage);
+    box-shadow: 0 4px 16px rgba(122, 158, 135, 0.35);
+}
+
+.winddownActive {
+    background: var(--terracotta, #c27b5a);
+    color: white;
+    border-color: var(--terracotta, #c27b5a);
+    box-shadow: 0 4px 16px rgba(194, 123, 90, 0.35);
+}
+
 @media (max-width: 600px) {
     .controls {
         flex-direction: column;
