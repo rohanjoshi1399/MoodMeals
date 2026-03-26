@@ -1,6 +1,29 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextRequest, NextResponse } from "next/server";
 
+// --- Clinical nutrient mappings (single source of truth) ---
+const clinicalNutrientMap: Record<string, { clinicalState: string; targetedNutrients: string[] }> = {
+    stressed: { clinicalState: "high-stress", targetedNutrients: ["magnesium", "zinc", "vitamin-B6"] },
+    tired: { clinicalState: "cognitive-fatigue", targetedNutrients: ["iron", "vitamin-B12", "DHA"] },
+    sad: { clinicalState: "depressive", targetedNutrients: ["tryptophan", "folate", "vitamin-D"] },
+    focused: { clinicalState: "poor-focus", targetedNutrients: ["zinc", "magnesium", "iron"] },
+    happy: { clinicalState: "burnout", targetedNutrients: ["vitamin-C", "vitamin-E", "polyphenols"] },
+    energetic: { clinicalState: "burnout", targetedNutrients: ["vitamin-C", "vitamin-E", "polyphenols"] },
+    calm: { clinicalState: "high-stress", targetedNutrients: ["magnesium", "zinc", "vitamin-B6"] },
+};
+
+// Derive unique clinical states for prompt generation
+const clinicalStatesForPrompt = Object.values(
+    Object.entries(clinicalNutrientMap).reduce<Record<string, { state: string; nutrients: string[] }>>((acc, [, v]) => {
+        if (!acc[v.clinicalState]) acc[v.clinicalState] = { state: v.clinicalState, nutrients: v.targetedNutrients };
+        return acc;
+    }, {})
+);
+
+// Hoist Gemini client to module scope for reuse across requests
+const apiKey = process.env.GEMINI_API_KEY;
+const genAI = apiKey && apiKey !== "your_gemini_api_key_here" ? new GoogleGenerativeAI(apiKey) : null;
+
 // --- Local Heuristic Engine ---
 // This handles the logic when Gemini is unavailable or key is missing.
 const localHeuristicEngine = (text: string) => {
@@ -37,47 +60,55 @@ const localHeuristicEngine = (text: string) => {
     const responseMap: Record<string, { moods: string[], msg: string }> = {
         stressed: {
             moods: ["calm", "grounding", "comforting"],
-            msg: "It sounds like you've had a lot on your plate. A grounding, warm meal might help you find some calm."
+            msg: "It sounds like you've had a lot on your plate. Magnesium and zinc-rich foods can help modulate your stress response and promote calm."
         },
         tired: {
             moods: ["energetic", "comforting"],
-            msg: "You've been working hard. Let's get some energy back into your system with a revitalizing meal."
+            msg: "You've been working hard. Iron and B12-rich meals can boost oxygen transport and restore your energy levels."
         },
         happy: {
             moods: ["light", "happy"],
-            msg: "Love the energy! Let's keep that vibrant mood going with something light and fresh."
+            msg: "Love the energy! Antioxidant-rich foods with vitamin C and polyphenols can help sustain your positive mood."
         },
         focused: {
             moods: ["focused", "light"],
-            msg: "You seem targeted on your goals. Let's fuel that concentration with something light and brain-boosting."
+            msg: "You seem targeted on your goals. Zinc and magnesium support dopamine signaling to keep your concentration sharp."
         },
         sad: {
             moods: ["comforting", "happy"],
-            msg: "I'm sorry you're feeling down. Sometimes a warm, comforting meal is the first step toward feeling a bit better."
+            msg: "I'm sorry you're feeling down. Tryptophan and folate-rich foods support serotonin production, which can gently lift your spirits."
         },
         energetic: {
             moods: ["energetic", "light", "focused"],
-            msg: "You're powered up! Let's sustain that fire with a high-performance, vibrant meal."
+            msg: "You're powered up! Vitamin C and E-rich foods help neutralize oxidative stress so you can sustain that momentum."
         },
         calm: {
             moods: ["calm", "relaxed", "light"],
-            msg: "Staying balanced is a skill. Here are some light and relaxed choices to match your vibe."
+            msg: "Staying balanced is a skill. Magnesium-rich foods can help maintain your calm by supporting GABA activity."
         }
     };
 
     const result = responseMap[detectedEmotion] || responseMap.calm;
+    const clinical = clinicalNutrientMap[detectedEmotion] || clinicalNutrientMap.calm;
 
     return {
         emotion: detectedEmotion,
         intensity: moodText.length > 50 ? "high" : "medium",
         recommendedMoods: result.moods,
         message: result.msg,
+        clinicalState: clinical.clinicalState,
+        targetedNutrients: clinical.targetedNutrients,
         source: "local-heuristic"
     };
 };
 
 
 // --- API Route Handler ---
+
+// Generate clinical state descriptions from the map (keeps prompt in sync)
+const clinicalStatePromptLines = clinicalStatesForPrompt
+    .map(s => `   - "${s.state}" → (${s.nutrients.join(", ")})`)
+    .join("\n");
 
 export async function POST(req: NextRequest) {
     const { mood } = await req.json();
@@ -86,27 +117,33 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Mood text is required." }, { status: 400 });
     }
 
-    const apiKey = process.env.GEMINI_API_KEY;
-    const isMockKey = !apiKey || apiKey === "your_gemini_api_key_here";
-
-    // If key is missing or is placeholder, use local engine immediately
-    if (isMockKey) {
-        console.log("[analyze-mood] No API key found. Using Local Heuristic Engine.");
+    if (!genAI) {
         return NextResponse.json(localHeuristicEngine(mood));
     }
 
     try {
-        const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
         const prompt = `
-You are a nutritional mood expert. User's mood: "${mood}"
-Respond ONLY with valid JSON (no markdown):
+You are a clinical nutritional mood expert. Analyze the user's emotional state and recommend targeted nutrients.
+
+User's mood: "${mood}"
+
+Follow this 4-step pipeline:
+1. SEMANTIC ANALYSIS: Parse the core emotional state from the text.
+2. CLINICAL STATE MAPPING: Map to one of these 5 clinical states:
+${clinicalStatePromptLines}
+3. NUTRIENT PROFILING: Select 2-4 key micronutrients from the mapping above.
+4. MEAL MOOD TAGS: Choose 1-3 mood tags for meal matching.
+
+Respond ONLY with valid JSON (no markdown, no code fences):
 {
   "emotion": "<stressed | tired | happy | focused | sad | energetic | calm>",
   "intensity": "<low | medium | high>",
+  "clinicalState": "<${clinicalStatesForPrompt.map(s => s.state).join(" | ")}>",
+  "targetedNutrients": ["<2-4 key micronutrients>"],
   "recommendedMoods": ["<1-3 tags from: calm, relaxed, focused, energetic, happy, comforting, light, grounding>"],
-  "message": "<1 empathetic sentence about how food can help their mood>"
+  "message": "<1-2 empathetic sentences explaining how specific nutrients in food can help>"
 }
 `;
 
@@ -117,9 +154,9 @@ Respond ONLY with valid JSON (no markdown):
 
         return NextResponse.json({ ...parsed, source: "gemini-ai" });
 
-    } catch (err: any) {
-        // If Gemini fails (429, 404, etc.), silently fallback to Local Engine
-        console.warn("[analyze-mood] Gemini AI failed. Falling back to Local Heuristic Engine.", err.message);
+    } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        console.warn("[analyze-mood] Gemini AI failed, falling back to heuristic.", message);
         return NextResponse.json(localHeuristicEngine(mood));
     }
 }

@@ -1,17 +1,26 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import styles from "./Hero.module.css";
 
-const Hero = () => {
-    const [showPreferences, setShowPreferences] = useState(false);
+const MOOD_WORDS = ["stressed", "tired", "anxious", "happy", "focused", "calm", "energetic"] as const;
 
-    const handleStart = () => {
-        setShowPreferences(true);
-        // Scroll to the recipes section or just show choices here
-    };
+const Hero = () => {
+    const [wordIdx, setWordIdx] = useState(0);
+    const [fading, setFading] = useState(false);
+
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setFading(true);
+            setTimeout(() => {
+                setWordIdx(i => (i + 1) % MOOD_WORDS.length);
+                setFading(false);
+            }, 320);
+        }, 2600);
+        return () => clearInterval(timer);
+    }, []);
 
     return (
         <section className={styles.hero}>
@@ -19,50 +28,46 @@ const Hero = () => {
                 <div className={styles.inner}>
                     <div className={styles.content}>
                         <div className={styles.badge}>
-                            <span className={styles.dot}></span>
-                            NEW: MOOD-SYNC™ 2.0 IS HERE
+                            <span className={styles.dot} />
+                            POWERED BY NUTRITIONAL PSYCHIATRY
                         </div>
+
                         <h1 className={styles.headline}>
-                            Eat for how <br />
-                            you <em>feel.</em>
+                            Stress-eat <br />
+                            <em>smarter.</em>
                         </h1>
+
+                        <div className={styles.moodWordWrap}>
+                            <span className={styles.moodWordLabel}>When you&apos;re feeling</span>
+                            <span
+                                className={`${styles.moodWord} ${fading ? styles.moodWordFade : ""}`}
+                            >
+                                {MOOD_WORDS[wordIdx]}
+                            </span>
+                            <span className={styles.moodWordLabel}>— we know what to eat.</span>
+                        </div>
+
                         <p className={styles.copy}>
-                            MoodMeals is an emotion-aware meal planning app that maps
-                            your state of mind to curated nutritional profiles.
+                            MoodMeals maps your emotional state to clinically-backed nutrients
+                            (Jacka et al., 2017; Opie et al., 2015). Meals matched to your mood,
+                            on a student budget.
                         </p>
 
-                        {!showPreferences ? (
-                            <div className={styles.actions}>
-                                <button onClick={handleStart} className={styles.btnPrimary}>
-                                    Get Started Free
-                                </button>
-                                <Link href="#how" className={styles.btnSecondary}>
-                                    How it Works
-                                </Link>
-                            </div>
-                        ) : (
-                            <div style={{ animation: "fadeIn 0.5s ease-out" }}>
-                                <p style={{ fontWeight: 700, marginBottom: "16px", color: "var(--text-dark)" }}>Choose your dietary path:</p>
-                                <div className={styles.actions}>
-                                    <Link href="#recipes" className={styles.btnPrimary} style={{ background: "var(--sage-light)" }}>
-                                        🥗 Veg
-                                    </Link>
-                                    <Link href="#recipes" className={styles.btnPrimary} style={{ background: "var(--coral-light)" }}>
-                                        🍗 Non-Veg
-                                    </Link>
-                                    <Link href="#recipes" className={styles.btnPrimary} style={{ background: "var(--lavender)" }}>
-                                        🌱 Vegan
-                                    </Link>
-                                </div>
-                            </div>
-                        )}
+                        <div className={styles.actions}>
+                            <Link href="#try" className={styles.btnPrimary}>
+                                Try It Now
+                            </Link>
+                            <Link href="/app" className={styles.btnSecondary}>
+                                Open App →
+                            </Link>
+                        </div>
                     </div>
 
                     <div className={styles.visual}>
                         <div className={styles.imgWrap}>
                             <Image
                                 src="/hero.png"
-                                alt="Healthy Salmon Grain Bowl"
+                                alt="Healthy grain bowl"
                                 width={480}
                                 height={600}
                                 priority
@@ -74,6 +79,9 @@ const Hero = () => {
                         </div>
                         <div className={`${styles.chip} ${styles.chipTwo}`}>
                             <span>🚀</span> Focused
+                        </div>
+                        <div className={`${styles.chip} ${styles.chipThree}`}>
+                            <span>⚡</span> Energized
                         </div>
                     </div>
                 </div>

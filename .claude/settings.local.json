@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(claude --permission-mode:*)",
+      "Read(//c/Users/rjjos/AppData/Local/Temp/claude/c--Users-rjjos-Documents-NEU-Hackathon-MoodMeals/e1df75f4-c564-4763-8795-4a1bf4973ba4/tasks/**)",
+      "Bash(jobs -l)",
+      "Bash(npx next:*)",
+      "Bash(grep -v \"$$\")",
+      "Read(//c/Users/rjjos/.claude/skills/notebooklm/**)",
+      "Bash(python scripts/run.py auth_manager.py status)",
+      "Edit(~/.claude/skills/notebooklm/**)",
+      "Bash(set PYTHONUTF8=1)",
+      "Bash(python -X utf8 scripts/run.py auth_manager.py status)",
+      "Bash(.venv/Scripts/pip.exe install:*)",
+      "Bash(.venv/Scripts/python.exe -m patchright install chrome)",
+      "Bash(.venv/Scripts/python.exe scripts/auth_manager.py status)",
+      "Bash(python scripts/run.py auth_manager.py setup)",
+      "Bash(python scripts/run.py notebook_manager.py list)",
+      "Bash(python scripts/run.py ask_question.py --question \"What is the content of this notebook? What topics are covered? Provide a complete overview briefly and concisely\" --notebook-url \"https://notebooklm.google.com/notebook/caf639d9-e4c3-4033-8ff2-89bf9813aa7e\")",
+      "Bash(python scripts/run.py notebook_manager.py add --url \"https://notebooklm.google.com/notebook/caf639d9-e4c3-4033-8ff2-89bf9813aa7e\" --name \"MoodMeals Engineering & Nutrition Research\" --description \"Multidisciplinary research covering nutritional psychiatry, gut-brain axis, healthcare UX design, PWA architecture, food/nutrition APIs \\(Edamam, Spoonacular, USDA\\), LLM integration for proactive interventions, Canvas LMS integration, student budgeting in Seattle\" --topics \"nutritional-psychiatry,gut-brain-axis,healthcare-ux,pwa,food-apis,llm-integration,student-budgeting,meal-planning,mental-health\")",
+      "Bash(python scripts/run.py ask_question.py --question \"Provide the FULL content of the report titled ''Strategic Engineering and Psychological Frameworks for Emotion-Aware Nutritional Systems: The MoodMeals Technical and Clinical Specification''. I need EVERY section, EVERY feature specification, EVERY technical recommendation, and EVERY clinical framework mentioned. Include all API recommendations, all UX patterns, all nutritional science frameworks, all LLM integration strategies, all proactive intervention mechanisms, and all budget-conscious features. Be as comprehensive and detailed as possible - do not summarize, reproduce ALL content.\" --notebook-url \"https://notebooklm.google.com/notebook/caf639d9-e4c3-4033-8ff2-89bf9813aa7e\")",
+      "Skill(wizard)",
+      "Skill(wizard:*)"
+    ]
+  }
+}
