@@ -1,5 +1,5 @@
-const CACHE_NAME = "moodmeals-v1";
-const PRECACHE_URLS = ["/app", "/app/pantry", "/app/grocery", "/app/journal"];
+const CACHE_NAME = "moodmeals-v2";
+const PRECACHE_URLS = ["/app", "/app/pantry", "/app/grocery", "/app/journal", "/app/calendar"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -27,6 +27,18 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
+
+  const url = new URL(event.request.url);
+
+  // Never cache/intercept: auth routes, API routes, or any URL with auth code params
+  if (
+    url.pathname.startsWith("/auth/") ||
+    url.pathname.startsWith("/api/") ||
+    url.searchParams.has("code") ||
+    url.searchParams.has("error")
+  ) {
+    return;
+  }
 
   event.respondWith(
     fetch(event.request)

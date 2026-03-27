@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { MoodProvider } from "@/context/MoodContext";
 import { PantryProvider } from "@/context/PantryContext";
 import { GroceryProvider } from "@/context/GroceryContext";
@@ -24,6 +24,7 @@ const NAV_LINKS = [
     { href: "/app/pantry", label: "Pantry" },
     { href: "/app/grocery", label: "Grocery" },
     { href: "/app/journal", label: "Journal" },
+    { href: "/app/profile", label: "Profile" },
 ];
 
 const ALLERGY_OPTIONS: { value: AllergyType; label: string }[] = [
@@ -64,39 +65,16 @@ function AllergyChipSelector({
 }
 
 function UserArea() {
-    const { user, isLoggedIn, login, logout, updateAllergies } = useUser();
+    const { user, isLoggedIn, login } = useUser();
     const [showSignIn, setShowSignIn] = useState(false);
-    const [showDropdown, setShowDropdown] = useState(false);
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [selectedAllergies, setSelectedAllergies] = useState<AllergyType[]>([]);
-    const [showManageAllergies, setShowManageAllergies] = useState(false);
-    const dropdownRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        function handleClick(e: MouseEvent) {
-            if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-                setShowDropdown(false);
-                setShowManageAllergies(false);
-            }
-        }
-        document.addEventListener("mousedown", handleClick);
-        return () => document.removeEventListener("mousedown", handleClick);
-    }, []);
 
     const toggleAllergy = (allergy: AllergyType) => {
         setSelectedAllergies(prev =>
             prev.includes(allergy) ? prev.filter(a => a !== allergy) : [...prev, allergy]
         );
-    };
-
-    const toggleDropdownAllergy = (allergy: AllergyType) => {
-        if (!user) return;
-        const current = user.allergies ?? [];
-        const updated = current.includes(allergy)
-            ? current.filter(a => a !== allergy)
-            : [...current, allergy];
-        updateAllergies(updated);
     };
 
     const handleLogin = () => {
@@ -111,42 +89,15 @@ function UserArea() {
 
     if (isLoggedIn && user) {
         return (
-            <div className={styles.userArea} ref={dropdownRef}>
-                <button
+            <div className={styles.userArea}>
+                <Link
+                    href="/app/profile"
                     className={styles.avatar}
                     style={{ background: user.avatarColor }}
-                    onClick={() => setShowDropdown(v => !v)}
-                    aria-label="User menu"
-                    aria-expanded={showDropdown}
+                    aria-label="Profile"
                 >
                     {user.name.charAt(0).toUpperCase()}
-                </button>
-                {showDropdown && (
-                    <div className={styles.dropdown}>
-                        <p className={styles.dropdownName}>{user.name}</p>
-                        {user.email && <p className={styles.dropdownEmail}>{user.email}</p>}
-                        <hr className={styles.dropdownDivider} />
-                        <button
-                            className={styles.manageAllergiesBtn}
-                            onClick={() => setShowManageAllergies(v => !v)}
-                        >
-                            {showManageAllergies ? "Hide Allergies ▲" : "Manage Allergies ▼"}
-                        </button>
-                        {showManageAllergies && (
-                            <AllergyChipSelector
-                                selected={user.allergies ?? []}
-                                onToggle={toggleDropdownAllergy}
-                            />
-                        )}
-                        <hr className={styles.dropdownDivider} />
-                        <button
-                            className={styles.dropdownSignOut}
-                            onClick={() => { logout(); setShowDropdown(false); }}
-                        >
-                            Sign Out
-                        </button>
-                    </div>
-                )}
+                </Link>
             </div>
         );
     }
@@ -210,12 +161,19 @@ function UserArea() {
 
 function AppHeader() {
     const pathname = usePathname();
+    const currentPage = NAV_LINKS.find(l => l.href === pathname)?.label ?? "Dashboard";
     return (
         <header className={styles.header}>
             <div className={styles.headerInner}>
-                <Link href="/app" className={styles.logo}>
-                    <span>🥗</span> MoodMeals
-                </Link>
+                <div className={styles.logoGroup}>
+                    <Link href="/app" className={styles.logo}>
+                        <span>🥗</span> MoodMeals
+                    </Link>
+                    <span className={styles.breadcrumb} aria-current="page">
+                        <span className={styles.breadcrumbSep}>/</span>
+                        {currentPage}
+                    </span>
+                </div>
                 <nav className={styles.desktopNav} aria-label="App navigation">
                     {NAV_LINKS.map(({ href, label }) => (
                         <Link
@@ -238,20 +196,16 @@ function AppHeader() {
 }
 
 function AuthGatedContent({ children }: { children: React.ReactNode }) {
-    const { isLoggedIn } = useUser();
-
-    if (!isLoggedIn) {
-        return <AuthGate />;
-    }
-
     return (
-        <div className={styles.shell}>
-            <AppHeader />
-            <main className={styles.main}>
-                {children}
-            </main>
-            <BottomNav />
-        </div>
+        <AuthGate>
+            <div className={styles.shell}>
+                <AppHeader />
+                <main className={styles.main}>
+                    {children}
+                </main>
+                <BottomNav />
+            </div>
+        </AuthGate>
     );
 }
 

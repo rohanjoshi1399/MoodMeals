@@ -11,7 +11,7 @@
     gap: 10px;
     cursor: pointer;
     padding: 14px 20px;
-    background: white;
+    background: var(--surface);
     border: 1px solid var(--beige-dark);
     border-radius: var(--radius-md);
     transition: all var(--transition);
@@ -64,7 +64,7 @@
 
 /* ---- Form card ---- */
 .formCard {
-    background: white;
+    background: var(--surface);
     border: 1px solid var(--beige-dark);
     border-radius: var(--radius-md);
     padding: 24px;
@@ -122,8 +122,8 @@
 .addBtn {
     padding: 11px 24px;
     border-radius: 999px;
-    background: var(--text-dark);
-    color: white;
+    background: var(--sage);
+    color: var(--on-primary);
     font-size: 0.88rem;
     font-weight: 700;
     border: none;
@@ -132,7 +132,7 @@
 }
 
 .addBtn:hover {
-    background: #000;
+    background: var(--sage-dark);
     transform: translateY(-1px);
 }
 
@@ -155,7 +155,7 @@
     align-items: center;
     gap: 12px;
     padding: 12px 16px;
-    background: white;
+    background: var(--surface);
     border: 1px solid var(--beige-dark);
     border-radius: var(--radius-sm);
     transition: all var(--transition);
@@ -251,75 +251,73 @@
 }
 
 /* ---- Dark mode ---- */
-@media (prefers-color-scheme: dark) {
-    .toggle {
-        background: #1a1a18;
-        border-color: #3a3828;
-    }
+[data-theme="dark"] .toggle {
+    background: #1a1a18;
+    border-color: #3a3828;
+}
 
-    .toggle:hover {
-        border-color: var(--sage);
-    }
+[data-theme="dark"] .toggle:hover {
+    border-color: var(--sage);
+}
 
-    .toggleLabel {
-        color: #e8e0d0;
-    }
+[data-theme="dark"] .toggleLabel {
+    color: #e8e0d0;
+}
 
-    .formCard {
-        background: #1a1a18;
-        border-color: #3a3828;
-    }
+[data-theme="dark"] .formCard {
+    background: #1a1a18;
+    border-color: #3a3828;
+}
 
-    .input,
-    .select {
-        background: #222218;
-        border-color: #3a3828;
-        color: #e8e0d0;
-    }
+[data-theme="dark"] .input,
+[data-theme="dark"] .select {
+    background: #222218;
+    border-color: #3a3828;
+    color: #e8e0d0;
+}
 
-    .input:focus,
-    .select:focus {
-        border-color: var(--sage);
-    }
+[data-theme="dark"] .input:focus,
+[data-theme="dark"] .select:focus {
+    border-color: var(--sage);
+}
 
-    .label {
-        color: #b0a890;
-    }
+[data-theme="dark"] .label {
+    color: #b0a890;
+}
 
-    .eventItem {
-        background: #1a1a18;
-        border-color: #3a3828;
-    }
+[data-theme="dark"] .eventItem {
+    background: #1a1a18;
+    border-color: #3a3828;
+}
 
-    .eventTitle {
-        color: #e8e0d0;
-    }
+[data-theme="dark"] .eventTitle {
+    color: #e8e0d0;
+}
 
-    .eventDate {
-        color: #8a8070;
-    }
+[data-theme="dark"] .eventDate {
+    color: #8a8070;
+}
 
-    .tagHigh {
-        background: #3a2a10;
-        color: #e8b060;
-    }
+[data-theme="dark"] .tagHigh {
+    background: #3a2a10;
+    color: #e8b060;
+}
 
-    .tagMedium {
-        background: rgba(122, 158, 135, 0.15);
-        color: #a8c4b0;
-    }
+[data-theme="dark"] .tagMedium {
+    background: rgba(122, 158, 135, 0.15);
+    color: #a8c4b0;
+}
 
-    .tagLow {
-        background: #2a2818;
-        color: #8a8070;
-    }
+[data-theme="dark"] .tagLow {
+    background: #2a2818;
+    color: #8a8070;
+}
 
-    .removeBtn {
-        color: #8a8070;
-    }
+[data-theme="dark"] .removeBtn {
+    color: #8a8070;
+}
 
-    .removeBtn:hover {
-        background: rgba(255, 255, 255, 0.06);
-        color: #e06050;
-    }
+[data-theme="dark"] .removeBtn:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: #e06050;
 }

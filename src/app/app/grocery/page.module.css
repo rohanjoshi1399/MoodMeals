@@ -30,6 +30,33 @@
     margin-bottom: 16px;
 }
 
+.headerActions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.calendarLink {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--sage);
+    border: 1.5px solid var(--sage-light);
+    border-radius: 999px;
+    padding: 6px 14px;
+    transition: all var(--transition);
+    white-space: nowrap;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.calendarLink:hover {
+    background: var(--sage);
+    color: var(--on-primary);
+    border-color: var(--sage);
+}
+
 .clearBtn {
     font-size: 0.82rem;
     font-weight: 600;
@@ -371,7 +398,7 @@
 
 /* ── Budget ── */
 .budget {
-    background: var(--text-dark);
+    background: #2d3a2e;
     color: var(--on-primary);
     border-radius: var(--radius-md);
     padding: 20px 24px;
@@ -390,6 +417,20 @@
     font-family: var(--font-lora), serif;
     font-size: 1.6rem;
     font-weight: 700;
+}
+
+[data-theme="dark"] .budget {
+    background: #1e2d22;
+    border: 1px solid rgba(168, 196, 176, 0.2);
+}
+
+[data-theme="dark"] .budgetLabel {
+    color: #a8c4b0;
+    opacity: 1;
+}
+
+[data-theme="dark"] .budgetAmount {
+    color: #e8ede9;
 }
 
 /* ── Budget Tip Badge (inline on ingredients) ── */

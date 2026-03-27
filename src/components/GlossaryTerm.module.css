@@ -3,12 +3,36 @@
     display: inline;
     border-bottom: 1px dotted var(--text-light);
     cursor: help;
+    z-index: 1;
+}
+
+.wrapper:hover,
+.wrapper:focus-within {
+    z-index: 1000;
+}
+
+/* Info icon indicator */
+.infoIcon {
+    display: inline-block;
+    font-size: 0.65em;
+    color: var(--text-light);
+    opacity: 0.7;
+    margin-left: 2px;
+    vertical-align: super;
+    transition: color 0.2s ease, opacity 0.2s ease;
+    line-height: 1;
+}
+
+.wrapper:hover .infoIcon,
+.wrapper:active .infoIcon {
+    color: var(--sage);
+    opacity: 1;
 }
 
 .tooltip {
     position: absolute;
     left: 50%;
-    z-index: 100;
+    z-index: 1000;
     width: max-content;
     max-width: 280px;
     background: var(--warm-white, #fffef9);
@@ -87,6 +111,27 @@
 }
 
 .visible {
+    opacity: 1;
+}
+
+/* Portal-rendered tooltip (rendered at document.body level to avoid overflow clipping) */
+.tooltipPortal {
+    position: fixed;
+    z-index: 9999;
+    width: max-content;
+    max-width: 280px;
+    background: var(--warm-white, #fffef9);
+    border: 1px solid var(--beige-dark, #e8e0d0);
+    border-radius: 8px;
+    padding: 8px 12px;
+    box-shadow: 0 4px 12px rgba(45, 58, 46, 0.15);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    text-align: left;
+}
+
+.tooltipPortal.visible {
     opacity: 1;
 }
 

@@ -6,11 +6,11 @@ import styles from "./MealLibrary.module.css";
 import { MEALS } from "../data/meals";
 import type { Meal, MealCuisine, MealDietFocus, MealType, MealEffort } from "../types";
 import { useMood } from "../context/MoodContext";
+import { useStressCalendar } from "../context/StressCalendarContext";
 import { useGroceryOptional } from "../context/GroceryContext";
 import { usePantry } from "../context/PantryContext";
 import { useUser } from "../context/UserContext";
 import { BUDGET_ALTERNATIVES } from "../data/budgetTips";
-import GlossaryTerm from "./GlossaryTerm";
 import ShareToast from "./ShareToast";
 
 
@@ -77,7 +77,7 @@ function effortBadge(effort: MealEffort): { emoji: string; label: string } {
         case "minimal": return { emoji: "\u26A1", label: "Quick" };
         case "easy": return { emoji: "\u26A1", label: "Quick" };
         case "moderate": return { emoji: "\uD83D\uDD50", label: "Moderate" };
-        case "involved": return { emoji: "\uD83D\uDC68\u200D\uD83C\uDF73", label: "Involved" };
+        case "involved": return { emoji: "\uD83C\uDF72", label: "Slow Cook" };
     }
 }
 
@@ -104,15 +104,44 @@ function getBudgetTips(meal: Meal): { ingredient: string; tip: string; store: st
 }
 
 const MealLibrary = ({ gentleMode = false }: { gentleMode?: boolean }) => {
-    const { analysis, preference, sustainMode } = useMood();
+    const { analysis, preference: moodPreference, sustainMode } = useMood();
+    const { events: stressEvents } = useStressCalendar();
     const grocery = useGroceryOptional();
     const pantry = usePantry();
-    const { user } = useUser();
+    const { user, profile } = useUser();
+
+    // Preference: use profile-level preference (UserContext) with MoodContext as fallback
+    const preference = profile?.preference ?? moodPreference;
+
+    // Find stress events in the next 24 hours for contextual note
+    const urgentStressEvents = useMemo(() => {
+        const now = new Date();
+        const horizon = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+        return stressEvents.filter((evt) => {
+            const evtDate = new Date(evt.date + (evt.time ? `T${evt.time}` : "T09:00:00"));
+            return evtDate > now && evtDate <= horizon;
+        });
+    }, [stressEvents]);
+
+    // Hydration guard: avoid SSR/client mismatch for localStorage-backed state
+    const [hasMounted, setHasMounted] = useState(false);
+    useEffect(() => { setHasMounted(true); }, []);
 
     const pantryHasItems = pantry.items.length > 0;
     const userAllergies = user?.allergies ?? [];
-    const [expandedId, setExpandedId] = useState<string | null>(null);
+    const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+    const toggleExpanded = (id: string) => {
+        setExpandedIds(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
+            return next;
+        });
+    };
     const [showAllOverride, setShowAllOverride] = useState(false);
+
+    // Gentle mode: filters start collapsed but user can toggle them open
+    const [filtersExpanded, setFiltersExpanded] = useState(!gentleMode);
 
     // Dynamic API meals state
     const [apiMeals, setApiMeals] = useState<Meal[]>([]);
@@ -267,11 +296,16 @@ const MealLibrary = ({ gentleMode = false }: { gentleMode?: boolean }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [targetedNutrients.join(","), preference, userAllergies.join(","), analysis?.clinicalState]);
 
-    // Combine API meals + curated meals, filter and score
-    const sortedMeals = useMemo(() => {
-        // Curated meals: filter by allergens and preference
-        // non-veg sees all; veg sees veg + vegan; vegan sees only vegan
-        const curatedSafe = MEALS.filter((m) => {
+    // Whether we are using curated fallback (API returned empty after loading)
+    const usingCuratedFallback = apiMeals.length === 0 && !apiLoading && analysis !== null;
+
+    // Base meal pool: API meals (if available) or curated meals filtered by allergens/preference
+    const combinedMeals = useMemo(() => {
+        // If API returned meals, use ONLY those — do not mix with curated
+        if (apiMeals.length > 0) return apiMeals;
+
+        // Fallback: curated meals filtered by allergens/preference
+        return MEALS.filter((m) => {
             if (userAllergies.length > 0) {
                 const mealAllergens = m.allergens ?? [];
                 if (userAllergies.some((a) => mealAllergens.includes(a))) return false;
@@ -280,9 +314,43 @@ const MealLibrary = ({ gentleMode = false }: { gentleMode?: boolean }) => {
             if (preference === "veg") return m.preference === "veg" || m.preference === "vegan";
             return m.preference === "vegan";
         });
+    }, [userAllergies, preference, apiMeals]);
 
-        // Merge: API meals first (already filtered server-side), then curated
-        const combined: Meal[] = [...apiMeals, ...curatedSafe];
+    // Available filter values — derived from the unfiltered meal pool
+    const availableCuisines = useMemo(() => {
+        const set = new Set(combinedMeals.map((m) => m.cuisine));
+        return CUISINE_OPTIONS.filter((opt) => opt.value === "all" || set.has(opt.value as MealCuisine));
+    }, [combinedMeals]);
+
+    const availableDietFocus = useMemo(() => {
+        const set = new Set(combinedMeals.map((m) => m.dietFocus));
+        return DIET_OPTIONS.filter((opt) => opt.value === "all" || set.has(opt.value as MealDietFocus));
+    }, [combinedMeals]);
+
+    const availableCookTimes = useMemo(() => {
+        let hasQuick = false, hasMedium = false, hasLong = false;
+        for (const m of combinedMeals) {
+            if (m.cookTime < 20) hasQuick = true;
+            else if (m.cookTime <= 40) hasMedium = true;
+            else hasLong = true;
+        }
+        return COOK_TIME_OPTIONS.filter((opt) => {
+            if (opt.value === "all") return true;
+            if (opt.value === "quick") return hasQuick;
+            if (opt.value === "medium") return hasMedium;
+            if (opt.value === "long") return hasLong;
+            return false;
+        });
+    }, [combinedMeals]);
+
+    const availableMealTypes = useMemo(() => {
+        const set = new Set(combinedMeals.map((m) => m.mealType));
+        return MEAL_TYPE_OPTIONS.filter((opt) => opt.value === "all" || set.has(opt.value as MealType));
+    }, [combinedMeals]);
+
+    // Combine API meals + curated meals, filter and score
+    const sortedMeals = useMemo(() => {
+        const combined = combinedMeals;
 
         // Apply granular filters
         const granularFiltered = combined.filter((m) => {
@@ -334,7 +402,7 @@ const MealLibrary = ({ gentleMode = false }: { gentleMode?: boolean }) => {
                 return { ...meal, score, matched: moodTagMatches > 0 || nutrientMatches > 0 || isApiMeal(meal) };
             })
             .sort((a, b) => b.score - a.score);
-    }, [userAllergies, preference, apiMeals, cuisineFilter, dietFilter, cookTimeFilter, mealTypeFilter, analysis, targetMoods, targetedNutrients, lowFrictionActive]);
+    }, [combinedMeals, cuisineFilter, dietFilter, cookTimeFilter, mealTypeFilter, analysis, targetMoods, targetedNutrients, lowFrictionActive]);
 
     const apiMealCount = sortedMeals.filter((m) => isApiMeal(m)).length;
 
@@ -353,7 +421,8 @@ const MealLibrary = ({ gentleMode = false }: { gentleMode?: boolean }) => {
     return (
         <section id="recipes" className={styles.section}>
             <div className="container">
-                {analysis ? (
+                {/* Analysis result or welcome empty state */}
+                {hasMounted && analysis ? (
                     <div className={styles.analysisResult}>
                         <span className={styles.emotion}>
                             {emotionEmoji(analysis.emotion)} {capitalize(analysis.emotion)}
@@ -368,6 +437,21 @@ const MealLibrary = ({ gentleMode = false }: { gentleMode?: boolean }) => {
                                         {nutrient}
                                     </span>
                                 ))}
+                            </div>
+                        )}
+                        {urgentStressEvents.length > 0 && (
+                            <div className={styles.eventContextNote}>
+                                <span className={styles.eventContextIcon}>&#127919;</span>
+                                <span>
+                                    Your meals are optimized for your upcoming{" "}
+                                    {urgentStressEvents.map((evt, i) => (
+                                        <strong key={evt.id}>
+                                            {evt.title}
+                                            {i < urgentStressEvents.length - 1 ? ", " : ""}
+                                        </strong>
+                                    ))}{" "}
+                                    {urgentStressEvents.length === 1 ? "tomorrow" : "coming up soon"}
+                                </span>
                             </div>
                         )}
                     </div>
@@ -386,28 +470,39 @@ const MealLibrary = ({ gentleMode = false }: { gentleMode?: boolean }) => {
                     </div>
                 )}
 
-                {/* Filter bar — hidden in gentle mode to reduce decisions */}
-                {!gentleMode && (
-                    <div className={styles.filterBar}>
-                        <div className={styles.filterBarHeader}>
-                            <span className={styles.filterBarTitle}>
-                                Filters
-                                {activeFilterCount > 0 && (
-                                    <span className={styles.filterCount}>{activeFilterCount}</span>
-                                )}
-                            </span>
+                {/* Filter bar — always visible; collapsed initially in gentle mode */}
+                <div className={styles.filterBar}>
+                    <div className={styles.filterBarHeader}>
+                        <span className={styles.filterBarTitle}>
+                            Filters
+                            {activeFilterCount > 0 && (
+                                <span className={styles.filterCount}>{activeFilterCount}</span>
+                            )}
+                        </span>
+                        <div className={styles.filterBarActions}>
                             {activeFilterCount > 0 && (
                                 <button className={styles.clearFiltersLink} onClick={clearFilters}>
                                     Clear all filters
                                 </button>
                             )}
+                            {gentleMode && (
+                                <button
+                                    className={styles.filterToggleBtn}
+                                    onClick={() => setFiltersExpanded((prev) => !prev)}
+                                    aria-expanded={filtersExpanded}
+                                >
+                                    {filtersExpanded ? "Hide filters" : "Show filters"}
+                                </button>
+                            )}
                         </div>
+                    </div>
 
+                    {(!gentleMode || filtersExpanded) && (
                         <div className={styles.filterGrid}>
                             <div className={styles.filterRow}>
                                 <span className={styles.filterRowLabel}>Cuisine</span>
                                 <div className={styles.chipRow}>
-                                    {CUISINE_OPTIONS.map((opt) => (
+                                    {availableCuisines.map((opt) => (
                                         <button
                                             key={opt.value}
                                             className={`${styles.chip} ${cuisineFilter === opt.value ? styles.chipActive : ""}`}
@@ -422,7 +517,7 @@ const MealLibrary = ({ gentleMode = false }: { gentleMode?: boolean }) => {
                             <div className={styles.filterRow}>
                                 <span className={styles.filterRowLabel}>Diet Focus</span>
                                 <div className={styles.chipRow}>
-                                    {DIET_OPTIONS.map((opt) => (
+                                    {availableDietFocus.map((opt) => (
                                         <button
                                             key={opt.value}
                                             className={`${styles.chip} ${dietFilter === opt.value ? styles.chipActive : ""}`}
@@ -437,7 +532,7 @@ const MealLibrary = ({ gentleMode = false }: { gentleMode?: boolean }) => {
                             <div className={styles.filterRow}>
                                 <span className={styles.filterRowLabel}>Cook Time</span>
                                 <div className={styles.chipRow}>
-                                    {COOK_TIME_OPTIONS.map((opt) => (
+                                    {availableCookTimes.map((opt) => (
                                         <button
                                             key={opt.value}
                                             className={`${styles.chip} ${cookTimeFilter === opt.value ? styles.chipActive : ""}`}
@@ -452,7 +547,7 @@ const MealLibrary = ({ gentleMode = false }: { gentleMode?: boolean }) => {
                             <div className={styles.filterRow}>
                                 <span className={styles.filterRowLabel}>Meal Type</span>
                                 <div className={styles.chipRow}>
-                                    {MEAL_TYPE_OPTIONS.map((opt) => (
+                                    {availableMealTypes.map((opt) => (
                                         <button
                                             key={opt.value}
                                             className={`${styles.chip} ${mealTypeFilter === opt.value ? styles.chipActive : ""}`}
@@ -464,8 +559,8 @@ const MealLibrary = ({ gentleMode = false }: { gentleMode?: boolean }) => {
                                 </div>
                             </div>
                         </div>
-                    </div>
-                )}
+                    )}
+                </div>
 
                 {/* Low-friction mode banner */}
                 {lowFrictionActive && (
@@ -496,6 +591,12 @@ const MealLibrary = ({ gentleMode = false }: { gentleMode?: boolean }) => {
                     </p>
                 )}
 
+                {usingCuratedFallback && targetedNutrients.length > 0 && (
+                    <p className={styles.curatedFallbackNote}>
+                        Showing curated recommendations (personalized results temporarily unavailable)
+                    </p>
+                )}
+
                 {/* Loading skeleton for API meals */}
                 {apiLoading && analysis && (
                     <div className={styles.exploreGrid}>
@@ -515,15 +616,8 @@ const MealLibrary = ({ gentleMode = false }: { gentleMode?: boolean }) => {
                     </div>
                 )}
 
-                {/* Browse divider when no analysis yet */}
-                {!analysis && sortedMeals.length > 0 && (
-                    <div className={styles.browseDivider}>
-                        <span className={styles.browseDividerText}>or browse all meals</span>
-                    </div>
-                )}
-
-                {/* Empty filters fallback */}
-                {sortedMeals.length === 0 && !apiLoading && (
+                {/* Empty filters fallback — only when analysis exists but filters exclude everything */}
+                {analysis && sortedMeals.length === 0 && !apiLoading && (
                     <div className={styles.emptyFilters}>
                         <span className={styles.emptyFiltersIcon}>🔍</span>
                         <h3 className={styles.emptyFiltersHeading}>No meals match your filters</h3>
@@ -546,9 +640,10 @@ const MealLibrary = ({ gentleMode = false }: { gentleMode?: boolean }) => {
                     </div>
                 )}
 
-                <div className={styles.grid}>
+                {/* Only show meal grid when user has entered their mood */}
+                {analysis && <div className={styles.grid}>
                     {(gentleMode && !showAllOverride ? sortedMeals.slice(0, 3) : sortedMeals).map((meal, idx) => {
-                        const isExpanded = expandedId === meal.id || (gentleMode && !showAllOverride && idx === 0);
+                        const isExpanded = expandedIds.has(meal.id) || (gentleMode && !showAllOverride && idx === 0);
                         const isFromApi = isApiMeal(meal);
                         return (
                             <div
@@ -606,9 +701,16 @@ const MealLibrary = ({ gentleMode = false }: { gentleMode?: boolean }) => {
 
                                     {/* Pantry availability badge */}
                                     {pantryHasItems && meal.ingredients && meal.ingredients.length > 0 && (() => {
-                                        const inPantryCount = meal.ingredients.filter((ing) => pantry.hasItem(ing.name)).length;
                                         const total = meal.ingredients.length;
-                                        if (inPantryCount === total) {
+                                        let availableCount = 0;
+                                        let partialCount = 0;
+                                        for (const ing of meal.ingredients) {
+                                            const status = pantry.getItemStatus(ing.name);
+                                            if (status === "available") availableCount++;
+                                            else if (status === "partial") partialCount++;
+                                        }
+                                        const inPantryCount = availableCount + partialCount;
+                                        if (availableCount === total) {
                                             return (
                                                 <span className={`${styles.pantryBadge} ${styles.pantryBadgeFull}`}>
                                                     ✓ All ingredients available
@@ -618,7 +720,7 @@ const MealLibrary = ({ gentleMode = false }: { gentleMode?: boolean }) => {
                                         if (inPantryCount > 0) {
                                             return (
                                                 <span className={`${styles.pantryBadge} ${styles.pantryBadgePartial}`}>
-                                                    {inPantryCount}/{total} in pantry
+                                                    {availableCount}/{total} available{partialCount > 0 ? `, ${partialCount} low` : ""}
                                                 </span>
                                             );
                                         }
@@ -636,11 +738,20 @@ const MealLibrary = ({ gentleMode = false }: { gentleMode?: boolean }) => {
                                             <p className={styles.ingredientLine}>
                                                 <span className={styles.ingredientLabel}>Ingredients:</span>{" "}
                                                 {visible.map((ing, i) => {
-                                                    const inPantry = pantryHasItems && pantry.hasItem(ing.name);
+                                                    const ingStatus = pantryHasItems ? pantry.getItemStatus(ing.name) : "none";
                                                     return (
                                                         <span key={ing.name}>
-                                                            <span className={inPantry ? styles.ingredientInPantry : ""} title={ing.amount || undefined}>
-                                                                {inPantry && "✓ "}{ing.name},
+                                                            <span
+                                                                className={
+                                                                    ingStatus === "available" ? styles.ingredientInPantry
+                                                                    : ingStatus === "partial" ? styles.ingredientLowPantry
+                                                                    : ""
+                                                                }
+                                                                title={ing.amount || undefined}
+                                                            >
+                                                                {ingStatus === "available" && "✓ "}
+                                                                {ingStatus === "partial" && "⚠ "}
+                                                                {ing.name},
                                                             </span>
                                                             {i < visible.length - 1 && <span className={styles.ingredientSep}> · </span>}
                                                         </span>
@@ -706,19 +817,17 @@ const MealLibrary = ({ gentleMode = false }: { gentleMode?: boolean }) => {
                                                 </span>
                                             ))}
                                         </div>
-                                        <GlossaryTerm term="kcal">
-                                            <span className={styles.calories}>
-                                                {meal.calories} kcal
-                                                <span className={styles.caloriesPct}>{Math.round((meal.calories / 2000) * 100)}% DV</span>
-                                            </span>
-                                        </GlossaryTerm>
+                                        <span className={styles.calories} title="Daily Value: recommended daily intake based on a 2,000-calorie diet">
+                                            {meal.calories} kcal
+                                            <span className={styles.caloriesPct}>{Math.round((meal.calories / 2000) * 100)}% DV</span>
+                                        </span>
                                     </div>
 
                                     {/* Feature 3: Hide per-card "Why this meal?" when shared banner is shown */}
                                     {!sharedWhyText && (
                                         <button
                                             className={styles.whyToggle}
-                                            onClick={() => setExpandedId(expandedId === meal.id ? null : meal.id)}
+                                            onClick={() => toggleExpanded(meal.id)}
                                             aria-expanded={isExpanded}
                                         >
                                             <span>Why this meal?</span>
@@ -764,7 +873,7 @@ const MealLibrary = ({ gentleMode = false }: { gentleMode?: boolean }) => {
                                                     : grocery.addMeal(meal)
                                             }
                                         >
-                                            {grocery.hasMeal(meal.id) ? "✓ Added to Grocery" : "Try this meal"}
+                                            {grocery.hasMeal(meal.id) ? "✓ Top Pick Added" : "🛒 Add Top Pick to Grocery"}
                                         </button>
                                     )}
 
@@ -785,7 +894,7 @@ const MealLibrary = ({ gentleMode = false }: { gentleMode?: boolean }) => {
                             </div>
                         );
                     })}
-                </div>
+                </div>}
 
                 {gentleMode && !showAllOverride && sortedMeals.length > 3 && (
                     <button

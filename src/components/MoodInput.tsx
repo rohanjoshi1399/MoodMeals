@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useMood, MoodAnalysis } from "../context/MoodContext";
+import { useStressCalendar } from "../context/StressCalendarContext";
 import { MicIcon } from "./Icons";
 import styles from "./MoodInput.module.css";
 
@@ -16,16 +17,38 @@ const getSpeechRecognition = (): (new () => SpeechRecognition) | null => {
 };
 
 const MoodInput = () => {
-    const [text, setText] = useState("");
+    const [text, setText] = useState(() => {
+        try {
+            if (typeof window === "undefined") return "";
+            return localStorage.getItem("moodmeals_mood_input") ?? "";
+        } catch { return ""; }
+    });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
-    const { setAnalysis, analysis, preference, setPreference, sustainMode, setSustainMode } = useMood();
+    const { setAnalysis, analysis, sustainMode, setSustainMode } = useMood();
+    const { events: stressEvents } = useStressCalendar();
+
+    // Find stress events happening within the next 24 hours
+    const urgentEvents = useMemo(() => {
+        const now = new Date();
+        const horizon = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+        return stressEvents.filter((evt) => {
+            const evtDate = new Date(evt.date + (evt.time ? `T${evt.time}` : "T09:00:00"));
+            return evtDate > now && evtDate <= horizon;
+        });
+    }, [stressEvents]);
 
     // Voice input state
     const [isListening, setIsListening] = useState(false);
     const [speechSupported, setSpeechSupported] = useState(false);
     const recognitionRef = useRef<SpeechRecognition | null>(null);
     const baseTextRef = useRef("");
+    const currentTextRef = useRef(text);
+
+    // Keep currentTextRef in sync so toggleListening always sees the latest value
+    useEffect(() => {
+        currentTextRef.current = text;
+    }, [text]);
 
     useEffect(() => {
         setSpeechSupported(getSpeechRecognition() !== null);
@@ -34,6 +57,11 @@ const MoodInput = () => {
             recognitionRef.current = null;
         };
     }, []);
+
+    // Persist mood input text to localStorage
+    useEffect(() => {
+        try { localStorage.setItem("moodmeals_mood_input", text); } catch { /* ignore */ }
+    }, [text]);
 
     const toggleListening = useCallback(() => {
         if (isListening) {
@@ -50,7 +78,7 @@ const MoodInput = () => {
         recognition.interimResults = true;
         recognition.lang = "en-US";
         recognitionRef.current = recognition;
-        baseTextRef.current = text;
+        baseTextRef.current = currentTextRef.current;
 
         let finalTranscript = "";
 
@@ -91,11 +119,23 @@ const MoodInput = () => {
         setAnalysis(null);
         setSustainMode(null);
 
+        // Append upcoming stress event context so the AI factors it in
+        let moodWithContext = trimmed;
+        if (urgentEvents.length > 0) {
+            const eventDescriptions = urgentEvents.map((evt) => {
+                const evtDate = new Date(evt.date + (evt.time ? `T${evt.time}` : "T09:00:00"));
+                const hoursUntil = Math.round((evtDate.getTime() - Date.now()) / (1000 * 60 * 60));
+                const timeLabel = hoursUntil <= 1 ? "in less than 1 hour" : `in about ${hoursUntil} hours`;
+                return `${evt.type} "${evt.title}" ${timeLabel}`;
+            });
+            moodWithContext += ` [Context: User has upcoming events - ${eventDescriptions.join("; ")}]`;
+        }
+
         try {
             const res = await fetch("/api/analyze-mood", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ mood: trimmed }),
+                body: JSON.stringify({ mood: moodWithContext }),
             });
 
             if (!res.ok) {
@@ -158,17 +198,6 @@ const MoodInput = () => {
                                         <MicIcon size={18} />
                                     </button>
                                 )}
-                                <span className={styles.prefLabel}>I eat:</span>
-                                {(["veg", "non-veg", "vegan"] as const).map((p) => (
-                                    <button
-                                        key={p}
-                                        type="button"
-                                        className={`${styles.prefBtn} ${preference === p ? styles.prefActive : ""}`}
-                                        onClick={() => setPreference(p)}
-                                    >
-                                        {p === "veg" ? "🥗 Veg" : p === "non-veg" ? "🍗 Non-Veg" : "🌱 Vegan"}
-                                    </button>
-                                ))}
                             </div>
 
                             <button

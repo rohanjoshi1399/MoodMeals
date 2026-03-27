@@ -182,7 +182,12 @@ export default function GroceryPage() {
             <div className={styles.header}>
                 <div className={styles.headerTop}>
                     <h1 className={styles.title}>Grocery List</h1>
-                    <button className={styles.clearBtn} onClick={clearMeals}>Clear all</button>
+                    <div className={styles.headerActions}>
+                        <Link href="/app/calendar" className={styles.calendarLink}>
+                            <span aria-hidden="true">📅</span> Plan Meals on Calendar
+                        </Link>
+                        <button className={styles.clearBtn} onClick={clearMeals}>Clear all</button>
+                    </div>
                 </div>
                 <p className={styles.subtitle}>
                     {selectedMeals.length} meal{selectedMeals.length !== 1 ? "s" : ""} selected

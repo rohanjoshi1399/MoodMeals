@@ -7,6 +7,13 @@ import styles from "./Hero.module.css";
 
 const MOOD_WORDS = ["stressed", "tired", "anxious", "happy", "focused", "calm", "energetic"] as const;
 
+const FEATURE_PILLS = [
+    { emoji: "\u{1F9E0}", label: "AI Mood Analysis" },
+    { emoji: "\u{1F4C5}", label: "Calendar Sync" },
+    { emoji: "\u{1F4B0}", label: "Seattle Budget Tips" },
+    { emoji: "\u{1F52C}", label: "Nutritional Science" },
+];
+
 const Hero = () => {
     const [wordIdx, setWordIdx] = useState(0);
     const [fading, setFading] = useState(false);
@@ -33,8 +40,10 @@ const Hero = () => {
                         </div>
 
                         <h1 className={styles.headline}>
-                            Stress-eat <br />
-                            <em>smarter.</em>
+                            Your mood drives <br />
+                            your meals. <br />
+                            Your meals drive <br />
+                            <em>your grades.</em>
                         </h1>
 
                         <div className={styles.moodWordWrap}>
@@ -48,10 +57,19 @@ const Hero = () => {
                         </div>
 
                         <p className={styles.copy}>
-                            MoodMeals maps your emotional state to clinically-backed nutrients
-                            (Jacka et al., 2017; Opie et al., 2015). Meals matched to your mood,
-                            on a student budget.
+                            AI-powered mood analysis meets nutritional psychiatry. MoodMeals
+                            predicts stress from your calendar, matches meals to your emotional
+                            state, and keeps it all on a Seattle student budget.
                         </p>
+
+                        <div className={styles.featurePills}>
+                            {FEATURE_PILLS.map(pill => (
+                                <span key={pill.label} className={styles.featurePill}>
+                                    <span className={styles.featurePillEmoji}>{pill.emoji}</span>
+                                    {pill.label}
+                                </span>
+                            ))}
+                        </div>
 
                         <div className={styles.actions}>
                             <Link href="#try" className={styles.btnPrimary}>
@@ -75,13 +93,13 @@ const Hero = () => {
                         </div>
 
                         <div className={`${styles.chip} ${styles.chipOne}`}>
-                            <span>😌</span> Relaxed
+                            <span>{"\u{1F60C}"}</span> Relaxed
                         </div>
                         <div className={`${styles.chip} ${styles.chipTwo}`}>
-                            <span>🚀</span> Focused
+                            <span>{"\u{1F680}"}</span> Focused
                         </div>
                         <div className={`${styles.chip} ${styles.chipThree}`}>
-                            <span>⚡</span> Energized
+                            <span>{"\u26A1"}</span> Energized
                         </div>
                     </div>
                 </div>

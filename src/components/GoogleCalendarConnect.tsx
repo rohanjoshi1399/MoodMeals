@@ -1,71 +1,22 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useStressCalendar } from "../context/StressCalendarContext";
+import { createClient } from "@/lib/supabase/client";
 import type { CalendarEventType } from "../types";
 import styles from "./GoogleCalendarConnect.module.css";
-
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
-const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? "";
-const SCOPES = "https://www.googleapis.com/auth/calendar.readonly";
-const TOKEN_KEY = "moodmeals_google_token";
-const TOKEN_EXPIRY_KEY = "moodmeals_google_token_expiry";
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-type ConnectionState = "disconnected" | "connecting" | "connected" | "error";
+type ConnectionState = "disconnected" | "connecting" | "connected" | "error" | "no-google";
 
 interface GoogleCalendarEvent {
     title: string;
     date: string;
     time?: string;
     type: CalendarEventType;
-}
-
-interface TokenResponse {
-    access_token: string;
-    expires_in: number;
-}
-
-interface TokenClient {
-    requestAccessToken: () => void;
-}
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function getStoredToken(): string | null {
-    if (typeof window === "undefined") return null;
-    const token = localStorage.getItem(TOKEN_KEY);
-    const expiry = localStorage.getItem(TOKEN_EXPIRY_KEY);
-    if (!token || !expiry) return null;
-    if (Date.now() > Number(expiry)) {
-        // Token expired — clean up
-        localStorage.removeItem(TOKEN_KEY);
-        localStorage.removeItem(TOKEN_EXPIRY_KEY);
-        return null;
-    }
-    return token;
-}
-
-function storeToken(token: string, expiresIn: number): void {
-    localStorage.setItem(TOKEN_KEY, token);
-    // Store expiry with a 5-minute buffer
-    localStorage.setItem(
-        TOKEN_EXPIRY_KEY,
-        String(Date.now() + (expiresIn - 300) * 1000),
-    );
-}
-
-function clearToken(): void {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(TOKEN_EXPIRY_KEY);
 }
 
 // Google color SVG icon
@@ -106,87 +57,39 @@ const GoogleCalendarConnect = () => {
     const [state, setState] = useState<ConnectionState>("disconnected");
     const [lastSyncCount, setLastSyncCount] = useState<number | null>(null);
     const [errorMsg, setErrorMsg] = useState("");
-    const tokenClientRef = useRef<TokenClient | null>(null);
-    const gsiLoadedRef = useRef(false);
-
-    // If no client ID is configured, render nothing
-    if (!GOOGLE_CLIENT_ID) return null;
 
     // ------------------------------------------------------------------
-    // Load Google Identity Services script
+    // Check for Supabase Google provider token on mount
     // ------------------------------------------------------------------
-
-    /* eslint-disable react-hooks/rules-of-hooks */
 
     useEffect(() => {
-        // Check for existing valid token on mount
-        const existingToken = getStoredToken();
-        if (existingToken) {
-            setState("connected");
-        }
+        let mounted = true;
 
-        // Load GIS script if not already present
-        if (gsiLoadedRef.current) return;
-        if (document.querySelector('script[src*="accounts.google.com/gsi/client"]'))  {
-            gsiLoadedRef.current = true;
-            initTokenClient();
-            return;
-        }
+        async function checkSession() {
+            const supabase = createClient();
+            if (!supabase) {
+                if (mounted) setState("no-google");
+                return;
+            }
 
-        const script = document.createElement("script");
-        script.src = "https://accounts.google.com/gsi/client";
-        script.async = true;
-        script.defer = true;
-        script.onload = () => {
-            gsiLoadedRef.current = true;
-            initTokenClient();
-        };
-        script.onerror = () => {
-            console.warn("[GoogleCalendarConnect] Failed to load GIS script");
-        };
-        document.head.appendChild(script);
+            const { data: { session } } = await supabase.auth.getSession();
 
-        // No cleanup — the script stays loaded for the session
-    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+            if (!mounted) return;
 
-    // ------------------------------------------------------------------
-    // Initialize the Google OAuth token client
-    // ------------------------------------------------------------------
-
-    const initTokenClient = useCallback(() => {
-        // google.accounts.oauth2 is provided by the GIS script
-        const google = (window as unknown as Record<string, unknown>).google as
-            | {
-                  accounts: {
-                      oauth2: {
-                          initTokenClient: (config: {
-                              client_id: string;
-                              scope: string;
-                              callback: (resp: TokenResponse & { error?: string }) => void;
-                          }) => TokenClient;
-                      };
-                  };
-              }
-            | undefined;
-
-        if (!google?.accounts?.oauth2) return;
-
-        tokenClientRef.current = google.accounts.oauth2.initTokenClient({
-            client_id: GOOGLE_CLIENT_ID,
-            scope: SCOPES,
-            callback: (tokenResponse) => {
-                if (tokenResponse.error) {
-                    setState("error");
-                    setErrorMsg("Google sign-in was cancelled or failed.");
-                    return;
-                }
-                storeToken(tokenResponse.access_token, tokenResponse.expires_in);
+            if (session?.provider_token) {
                 setState("connected");
-                // Auto-sync after connecting
-                fetchAndSyncEvents(tokenResponse.access_token);
-            },
-        });
-    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+            } else if (session?.user) {
+                // Logged in via Supabase but no Google provider token available
+                // (token may have expired from the session — user needs to re-auth)
+                setState("no-google");
+            } else {
+                setState("no-google");
+            }
+        }
+
+        checkSession();
+        return () => { mounted = false; };
+    }, []);
 
     // ------------------------------------------------------------------
     // Fetch events from our API route and add them to context
@@ -195,16 +98,14 @@ const GoogleCalendarConnect = () => {
     const fetchAndSyncEvents = useCallback(
         async (token: string) => {
             try {
+                setState("connecting");
                 const res = await fetch("/api/calendar/google", {
                     headers: { Authorization: `Bearer ${token}` },
                 });
 
                 if (res.status === 401) {
-                    // Token expired or revoked
-                    clearToken();
-                    setState("disconnected");
-                    setErrorMsg("Session expired. Please reconnect.");
                     setState("error");
+                    setErrorMsg("Session expired. Please sign in with Google again.");
                     return;
                 }
 
@@ -235,6 +136,7 @@ const GoogleCalendarConnect = () => {
                 }
 
                 setLastSyncCount(added);
+                setState("connected");
             } catch (err) {
                 console.warn("[GoogleCalendarConnect] Sync failed:", err);
                 setState("error");
@@ -244,55 +146,41 @@ const GoogleCalendarConnect = () => {
         [addEvent, events],
     );
 
-    /* eslint-enable react-hooks/rules-of-hooks */
-
     // ------------------------------------------------------------------
     // User actions
     // ------------------------------------------------------------------
 
-    const handleConnect = () => {
-        setState("connecting");
-        setErrorMsg("");
-        if (tokenClientRef.current) {
-            tokenClientRef.current.requestAccessToken();
-        } else {
-            // GIS might not have loaded yet — try to init
-            initTokenClient();
-            // Small delay then retry
-            setTimeout(() => {
-                if (tokenClientRef.current) {
-                    tokenClientRef.current.requestAccessToken();
-                } else {
-                    setState("error");
-                    setErrorMsg(
-                        "Google sign-in is not available. Please try again.",
-                    );
-                }
-            }, 500);
-        }
-    };
+    const handleSync = async () => {
+        const supabase = createClient();
+        if (!supabase) return;
 
-    const handleSync = () => {
-        const token = getStoredToken();
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.provider_token;
+
         if (!token) {
-            // Token expired
-            setState("disconnected");
+            setState("error");
+            setErrorMsg("Google token not available. Please sign in with Google again.");
             return;
         }
+
         setLastSyncCount(null);
         fetchAndSyncEvents(token);
-    };
-
-    const handleDisconnect = () => {
-        clearToken();
-        setState("disconnected");
-        setLastSyncCount(null);
-        setErrorMsg("");
     };
 
     // ------------------------------------------------------------------
     // Render
     // ------------------------------------------------------------------
+
+    if (state === "no-google") {
+        return (
+            <div className={styles.wrapper}>
+                <div className={styles.connectBtn} style={{ opacity: 0.6, cursor: "default" }}>
+                    <GoogleIcon className={styles.googleIcon} />
+                    <span>Sign in with Google to sync your calendar</span>
+                </div>
+            </div>
+        );
+    }
 
     if (state === "connected") {
         return (
@@ -309,14 +197,7 @@ const GoogleCalendarConnect = () => {
                         onClick={handleSync}
                         type="button"
                     >
-                        Sync
-                    </button>
-                    <button
-                        className={styles.disconnectBtn}
-                        onClick={handleDisconnect}
-                        type="button"
-                    >
-                        Disconnect
+                        Sync Calendar
                     </button>
                 </div>
                 {lastSyncCount !== null && (
@@ -330,6 +211,17 @@ const GoogleCalendarConnect = () => {
         );
     }
 
+    if (state === "connecting") {
+        return (
+            <div className={styles.wrapper}>
+                <div className={styles.connectBtn} style={{ opacity: 0.6, cursor: "wait" }}>
+                    <GoogleIcon className={styles.googleIcon} />
+                    <span>Syncing...</span>
+                </div>
+            </div>
+        );
+    }
+
     if (state === "error") {
         return (
             <div className={styles.wrapper}>
@@ -337,33 +229,17 @@ const GoogleCalendarConnect = () => {
                     <span className={styles.errorText}>{errorMsg}</span>
                     <button
                         className={styles.retryBtn}
-                        onClick={handleConnect}
+                        onClick={handleSync}
                         type="button"
                     >
-                        Reconnect
+                        Retry
                     </button>
                 </div>
             </div>
         );
     }
 
-    return (
-        <div className={styles.wrapper}>
-            <button
-                className={styles.connectBtn}
-                onClick={handleConnect}
-                disabled={state === "connecting"}
-                type="button"
-            >
-                <GoogleIcon className={styles.googleIcon} />
-                <span>
-                    {state === "connecting"
-                        ? "Connecting..."
-                        : "Connect Google Calendar"}
-                </span>
-            </button>
-        </div>
-    );
+    return null;
 };
 
 export default GoogleCalendarConnect;

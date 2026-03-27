@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { usePantry, PantryItem, PantryUnit } from "@/context/PantryContext";
 import styles from "./page.module.css";
 
@@ -149,12 +149,56 @@ function InlineQuantityEditor({ item, onSave }: { item: PantryItem; onSave: (qty
     );
 }
 
+/** Auto-detect ingredient category from name keywords. */
+function detectCategory(name: string): PantryItem["category"] {
+    const lower = name.toLowerCase();
+    const proteinKeywords = ["chicken", "beef", "fish", "salmon", "shrimp", "tofu", "eggs", "egg", "turkey", "pork", "meat", "lentils", "lentil", "beans", "bean", "chickpeas", "chickpea", "tempeh", "paneer"];
+    const grainKeywords = ["rice", "bread", "pasta", "quinoa", "oats", "oat", "flour", "noodles", "noodle", "tortilla", "cereal", "couscous"];
+    const vegetableKeywords = ["spinach", "tomato", "carrot", "pepper", "onion", "garlic", "broccoli", "lettuce", "avocado", "cucumber", "potato", "corn", "mushroom", "kale", "celery", "zucchini"];
+    const dairyKeywords = ["milk", "cheese", "yogurt", "butter", "cream", "paneer", "ghee"];
+    const spiceKeywords = ["salt", "pepper", "cumin", "turmeric", "paprika", "cinnamon", "oregano", "basil", "thyme", "ginger", "chili"];
+
+    if (proteinKeywords.some(k => lower.includes(k))) return "protein";
+    if (grainKeywords.some(k => lower.includes(k))) return "grain";
+    if (vegetableKeywords.some(k => lower.includes(k))) return "vegetable";
+    if (dairyKeywords.some(k => lower.includes(k))) return "dairy";
+    if (spiceKeywords.some(k => lower.includes(k))) return "spice";
+    return "other";
+}
+
 export default function PantryPage() {
     const { items, addItem, removeItem, updateItem } = usePantry();
     const [query, setQuery] = useState("");
     const [selectedCat, setSelectedCat] = useState<PantryItem["category"]>("other");
+    const [catManuallySet, setCatManuallySet] = useState(false);
     const [addQty, setAddQty] = useState<string>("");
     const [addUnit, setAddUnit] = useState<PantryUnit>("");
+    const nameInputRef = useRef<HTMLInputElement>(null);
+
+    /** Quick-add: prepopulate form fields so user can optionally set qty/unit before adding. */
+    const handleQuickAdd = useCallback((name: string, category: PantryItem["category"]) => {
+        setQuery(name);
+        setSelectedCat(category);
+        setCatManuallySet(true);
+        // Reset qty/unit so user starts fresh
+        setAddQty("");
+        setAddUnit("");
+        // Focus the name input so the form is ready
+        setTimeout(() => nameInputRef.current?.focus(), 0);
+    }, []);
+
+    const handleNameChange = (value: string) => {
+        setQuery(value);
+        // Auto-detect category unless user has manually overridden
+        if (!catManuallySet) {
+            setSelectedCat(detectCategory(value));
+        }
+    };
+
+    const handleCatSelect = (cat: PantryItem["category"]) => {
+        setSelectedCat(cat);
+        setCatManuallySet(true);
+    };
 
     const handleAdd = () => {
         const name = query.trim();
@@ -166,6 +210,8 @@ export default function PantryPage() {
         setQuery("");
         setAddQty("");
         setAddUnit("");
+        setSelectedCat("other");
+        setCatManuallySet(false);
     };
 
     const handleInlineSave = (itemId: string, qty?: number, unit?: PantryUnit) => {
@@ -186,57 +232,73 @@ export default function PantryPage() {
             </div>
 
             <div className={styles.container}>
-                {/* Add section */}
+                {/* Add section — redesigned card layout */}
                 <div className={styles.addCard}>
                     <h2 className={styles.sectionTitle}>Add an ingredient</h2>
-                    <div className={styles.addRow}>
-                        <input
-                            type="text"
-                            className={styles.addInput}
-                            placeholder="e.g. Salmon, Oats, Turmeric…"
-                            value={query}
-                            onChange={e => setQuery(e.target.value)}
-                            onKeyDown={e => e.key === "Enter" && handleAdd()}
-                        />
-                        <input
-                            type="number"
-                            className={styles.qtyInput}
-                            placeholder="Qty"
-                            value={addQty}
-                            onChange={e => setAddQty(e.target.value)}
-                            onKeyDown={e => e.key === "Enter" && handleAdd()}
-                            min={0}
-                            step="any"
-                            aria-label="Quantity"
-                        />
-                        <select
-                            className={styles.unitSelect}
-                            value={addUnit}
-                            onChange={e => setAddUnit(e.target.value as PantryUnit)}
-                            aria-label="Unit"
-                        >
-                            {UNITS.map(u => (
-                                <option key={u.value} value={u.value}>{u.label}</option>
-                            ))}
-                        </select>
-                        <select
-                            className={styles.catSelect}
-                            value={selectedCat}
-                            onChange={e => setSelectedCat(e.target.value as PantryItem["category"])}
-                            aria-label="Category"
-                        >
-                            {CATEGORIES.map(c => (
-                                <option key={c.key} value={c.key}>{c.icon} {c.label}</option>
-                            ))}
-                        </select>
-                        <button
-                            className={styles.addBtn}
-                            onClick={handleAdd}
-                            disabled={!query.trim()}
-                        >
-                            Add
-                        </button>
+
+                    {/* Primary: ingredient name input */}
+                    <input
+                        ref={nameInputRef}
+                        type="text"
+                        className={styles.addInput}
+                        placeholder="e.g., Chicken breast, Spinach, Rice..."
+                        value={query}
+                        onChange={e => handleNameChange(e.target.value)}
+                        onKeyDown={e => e.key === "Enter" && handleAdd()}
+                    />
+
+                    {/* Secondary: quantity + unit inline row */}
+                    <div className={styles.secondaryRow}>
+                        <span className={styles.secondaryLabel}>Amount (optional)</span>
+                        <div className={styles.secondaryFields}>
+                            <input
+                                type="number"
+                                className={styles.qtyInput}
+                                placeholder="Qty"
+                                value={addQty}
+                                onChange={e => setAddQty(e.target.value)}
+                                onKeyDown={e => e.key === "Enter" && handleAdd()}
+                                min={0}
+                                step="any"
+                                aria-label="Quantity"
+                            />
+                            <select
+                                className={styles.unitSelect}
+                                value={addUnit}
+                                onChange={e => setAddUnit(e.target.value as PantryUnit)}
+                                aria-label="Unit"
+                            >
+                                {UNITS.map(u => (
+                                    <option key={u.value} value={u.value}>{u.label}</option>
+                                ))}
+                            </select>
+                        </div>
                     </div>
+
+                    {/* Category: visual pill/chip selector */}
+                    <div className={styles.catChipsWrap}>
+                        <span className={styles.secondaryLabel}>Category</span>
+                        <div className={styles.catChips}>
+                            {CATEGORIES.map(c => (
+                                <button
+                                    key={c.key}
+                                    type="button"
+                                    className={`${styles.catChip} ${selectedCat === c.key ? styles.catChipActive : ""}`}
+                                    onClick={() => handleCatSelect(c.key)}
+                                >
+                                    {c.icon} {c.label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <button
+                        className={styles.addBtn}
+                        onClick={handleAdd}
+                        disabled={!query.trim()}
+                    >
+                        + Add to Pantry
+                    </button>
 
                     {availableQuick.length > 0 && (
                         <div className={styles.quickSection}>
@@ -246,7 +308,7 @@ export default function PantryPage() {
                                     <button
                                         key={q.name}
                                         className={styles.quickChip}
-                                        onClick={() => addItem(q.name, q.category)}
+                                        onClick={() => handleQuickAdd(q.name, q.category)}
                                     >
                                         + {q.name}
                                     </button>

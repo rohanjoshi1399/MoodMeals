@@ -94,7 +94,7 @@
     padding: 12px 14px;
     border-radius: var(--radius-md);
     border: 2px solid var(--beige-dark);
-    background: white;
+    background: var(--surface);
     cursor: pointer;
     transition: all var(--transition);
     min-width: 72px;
@@ -141,7 +141,7 @@
     font-family: inherit;
     font-size: 0.95rem;
     color: var(--text-dark);
-    background: white;
+    background: var(--warm-white);
     resize: none;
     outline: none;
     transition: border-color var(--transition);
@@ -171,7 +171,7 @@
     padding: 14px 24px;
     border-radius: 999px;
     background: var(--sage);
-    color: white;
+    color: var(--on-primary);
     font-weight: 700;
     font-size: 0.95rem;
     border: none;

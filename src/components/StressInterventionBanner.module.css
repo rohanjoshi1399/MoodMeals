@@ -9,8 +9,8 @@
 
 /* ---- Single banner card ---- */
 .banner {
-    background: #fef9ef;
-    border: 1px solid #f0ddb8;
+    background: var(--beige-pale);
+    border: 1px solid var(--beige-dark);
     border-radius: var(--radius-md);
     padding: 16px 20px;
     transition: all var(--transition);
@@ -98,7 +98,7 @@
 }
 
 .dismissBtn:hover {
-    background: rgba(0, 0, 0, 0.06);
+    background: var(--border);
     color: var(--text-dark);
 }
 
@@ -118,7 +118,7 @@
 }
 
 .detailInner {
-    border-top: 1px solid rgba(0, 0, 0, 0.06);
+    border-top: 1px solid var(--border);
     padding-top: 16px;
     display: flex;
     flex-direction: column;
@@ -168,7 +168,7 @@
     padding: 10px 20px;
     border-radius: 999px;
     background: var(--sage);
-    color: white;
+    color: var(--on-primary);
     font-size: 0.85rem;
     font-weight: 700;
     border: none;
@@ -214,53 +214,51 @@
 }
 
 /* ---- Dark mode ---- */
-@media (prefers-color-scheme: dark) {
-    .banner {
-        background: #2a2618;
-        border-color: #4a3f28;
-    }
+[data-theme="dark"] .banner {
+    background: #2a2618;
+    border-color: #4a3f28;
+}
 
-    .bannerHigh {
-        background: #2e2614;
-        border-color: #5a4828;
-    }
+[data-theme="dark"] .bannerHigh {
+    background: #2e2614;
+    border-color: #5a4828;
+}
 
-    .bannerMedium {
-        background: #1e2618;
-        border-color: #3a4830;
-    }
+[data-theme="dark"] .bannerMedium {
+    background: #1e2618;
+    border-color: #3a4830;
+}
 
-    .summaryText {
-        color: #e8e0d0;
-    }
+[data-theme="dark"] .summaryText {
+    color: #e8e0d0;
+}
 
-    .detailLabel {
-        color: #e8e0d0;
-    }
+[data-theme="dark"] .detailLabel {
+    color: #e8e0d0;
+}
 
-    .detailRow {
-        color: #b0a890;
-    }
+[data-theme="dark"] .detailRow {
+    color: #b0a890;
+}
 
-    .reason {
-        color: #b0a890;
-    }
+[data-theme="dark"] .reason {
+    color: #b0a890;
+}
 
-    .nutrientChip {
-        background: rgba(122, 158, 135, 0.2);
-        color: #a8c4b0;
-    }
+[data-theme="dark"] .nutrientChip {
+    background: rgba(122, 158, 135, 0.2);
+    color: #a8c4b0;
+}
 
-    .dismissBtn {
-        color: #b0a890;
-    }
+[data-theme="dark"] .dismissBtn {
+    color: #b0a890;
+}
 
-    .dismissBtn:hover {
-        background: rgba(255, 255, 255, 0.08);
-        color: #e8e0d0;
-    }
+[data-theme="dark"] .dismissBtn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #e8e0d0;
+}
 
-    .detailInner {
-        border-top-color: rgba(255, 255, 255, 0.08);
-    }
+[data-theme="dark"] .detailInner {
+    border-top-color: rgba(255, 255, 255, 0.08);
 }

@@ -27,6 +27,13 @@
     gap: 20px;
 }
 
+.logoGroup {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    flex-shrink: 0;
+}
+
 .logo {
     font-family: var(--font-lora), serif;
     font-size: 1.3rem;
@@ -37,6 +44,21 @@
     gap: 8px;
     white-space: nowrap;
     flex-shrink: 0;
+}
+
+/* Breadcrumb — page name indicator */
+.breadcrumb {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-mid);
+    white-space: nowrap;
+    display: none; /* shown on mobile only where desktop nav is hidden */
+}
+
+.breadcrumbSep {
+    margin: 0 6px;
+    color: var(--text-light);
+    font-weight: 400;
 }
 
 /* ── Desktop nav ── */
@@ -111,6 +133,7 @@
     box-shadow: 0 2px 8px rgba(var(--shadow-color), 0.12);
     transition: box-shadow var(--transition), transform var(--transition);
     flex-shrink: 0;
+    text-decoration: none;
 }
 
 .avatar:hover {
@@ -358,6 +381,10 @@
 @media (max-width: 768px) {
     .desktopNav {
         display: none;
+    }
+
+    .breadcrumb {
+        display: inline; /* show page name on mobile */
     }
 
     .backLink {

@@ -2,8 +2,10 @@
 
 import { useState, useMemo, useCallback } from "react";
 import { useMealCalendar, PlannedMeal } from "@/context/MealCalendarContext";
+import { useStressCalendar } from "@/context/StressCalendarContext";
 import { useGrocery } from "@/context/GroceryContext";
-import type { MealType } from "@/types";
+import EventInput from "@/components/EventInput";
+import type { MealType, CalendarEvent } from "@/types";
 import styles from "./page.module.css";
 
 // ---------------------------------------------------------------------------
@@ -228,9 +230,10 @@ interface WeekViewProps {
     weekStart: string;
     today: string;
     onAddClick: (date: string, mealType: MealType) => void;
+    stressEvents: CalendarEvent[];
 }
 
-function WeekView({ weekStart, today, onAddClick }: WeekViewProps) {
+function WeekView({ weekStart, today, onAddClick, stressEvents }: WeekViewProps) {
     const { getMealsForWeek, removeMealFromDate } = useMealCalendar();
     const weekMeals = getMealsForWeek(weekStart);
 
@@ -242,17 +245,30 @@ function WeekView({ weekStart, today, onAddClick }: WeekViewProps) {
         return result;
     }, [weekStart]);
 
+    // Group stress events by date string
+    const eventsByDate = useMemo(() => {
+        const map: Record<string, CalendarEvent[]> = {};
+        for (const evt of stressEvents) {
+            const dateKey = evt.date;
+            if (!map[dateKey]) map[dateKey] = [];
+            map[dateKey].push(evt);
+        }
+        return map;
+    }, [stressEvents]);
+
     return (
         <div className={styles.weekGrid}>
             {days.map((dateStr) => {
                 const d = new Date(dateStr + "T00:00:00");
                 const isToday = dateStr === today;
+                const isPast = dateStr < today;
                 const dayMeals = weekMeals[dateStr] || [];
+                const dayEvents = eventsByDate[dateStr] || [];
 
                 return (
                     <div
                         key={dateStr}
-                        className={`${styles.dayColumn} ${isToday ? styles.dayColumnToday : ""}`}
+                        className={`${styles.dayColumn} ${isToday ? styles.dayColumnToday : ""} ${isPast ? styles.dayColumnPast : ""}`}
                     >
                         <div className={styles.dayHeader}>
                             <div className={styles.dayName}>
@@ -262,6 +278,33 @@ function WeekView({ weekStart, today, onAddClick }: WeekViewProps) {
                                 {d.getDate()}
                             </div>
                         </div>
+                        {/* Stress events for this day */}
+                        {dayEvents.length > 0 && (
+                            <div className={styles.dayEvents}>
+                                {dayEvents.map((evt) => {
+                                    const icon = evt.type === "deadline" ? "\u23F0" : "\uD83D\uDCC5";
+                                    const label = evt.type === "deadline"
+                                        ? `Deadline: ${evt.title}`
+                                        : evt.title;
+                                    const stressClass =
+                                        evt.stressLevel === "high"
+                                            ? styles.eventPillHigh
+                                            : evt.stressLevel === "medium"
+                                              ? styles.eventPillMedium
+                                              : styles.eventPillLow;
+                                    return (
+                                        <div
+                                            key={evt.id}
+                                            className={`${styles.eventPill} ${stressClass}`}
+                                            title={`${evt.type}: ${evt.title}${evt.time ? ` at ${evt.time}` : ""}`}
+                                        >
+                                            <span className={styles.eventPillIcon}>{icon}</span>
+                                            <span className={styles.eventPillText}>{label}</span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
                         <div className={styles.daySlots}>
                             {MEAL_SLOTS.map((slot) => {
                                 const meals = dayMeals.filter(
@@ -289,22 +332,24 @@ function WeekView({ weekStart, today, onAddClick }: WeekViewProps) {
                                                 >
                                                     {meal.mealName}
                                                 </span>
-                                                <button
-                                                    className={styles.removeBtn}
-                                                    onClick={() =>
-                                                        removeMealFromDate(
-                                                            meal.mealId,
-                                                            dateStr,
-                                                        )
-                                                    }
-                                                    aria-label={`Remove ${meal.mealName}`}
-                                                    title="Remove"
-                                                >
-                                                    x
-                                                </button>
+                                                {!isPast && (
+                                                    <button
+                                                        className={styles.removeBtn}
+                                                        onClick={() =>
+                                                            removeMealFromDate(
+                                                                meal.mealId,
+                                                                dateStr,
+                                                            )
+                                                        }
+                                                        aria-label={`Remove ${meal.mealName}`}
+                                                        title="Remove"
+                                                    >
+                                                        x
+                                                    </button>
+                                                )}
                                             </div>
                                         ))}
-                                        {meals.length === 0 && (
+                                        {meals.length === 0 && !isPast && (
                                             <button
                                                 className={styles.emptySlot}
                                                 onClick={() =>
@@ -338,11 +383,21 @@ interface MonthViewProps {
     month: number;
     today: string;
     onDayClick: (dateStr: string) => void;
+    stressEvents: CalendarEvent[];
 }
 
-function MonthView({ year, month, today, onDayClick }: MonthViewProps) {
+function MonthView({ year, month, today, onDayClick, stressEvents }: MonthViewProps) {
     const { plannedMeals } = useMealCalendar();
     const cells = useMemo(() => getMonthDays(year, month), [year, month]);
+
+    const eventsByDate = useMemo(() => {
+        const map: Record<string, CalendarEvent[]> = {};
+        for (const evt of stressEvents) {
+            if (!map[evt.date]) map[evt.date] = [];
+            map[evt.date].push(evt);
+        }
+        return map;
+    }, [stressEvents]);
 
     return (
         <div className={styles.monthGrid}>
@@ -365,31 +420,38 @@ function MonthView({ year, month, today, onDayClick }: MonthViewProps) {
                     }
                     const isToday = dateStr === today;
                     const meals = plannedMeals[dateStr] ?? [];
+                    const dayEvents = eventsByDate[dateStr] ?? [];
                     const dayNum = new Date(
                         dateStr + "T00:00:00",
                     ).getDate();
                     const uniqueTypes = [
                         ...new Set(meals.map((m: PlannedMeal) => m.mealType)),
                     ];
+                    const hasEvents = dayEvents.length > 0;
 
                     return (
                         <button
                             key={dateStr}
-                            className={`${styles.monthDay} ${isToday ? styles.monthDayToday : ""}`}
+                            className={`${styles.monthDay} ${isToday ? styles.monthDayToday : ""} ${hasEvents ? styles.monthDayHasEvent : ""}`}
                             onClick={() => onDayClick(dateStr)}
-                            aria-label={`${dateStr}, ${meals.length} meals`}
+                            aria-label={`${dateStr}, ${meals.length} meals${hasEvents ? `, ${dayEvents.length} event${dayEvents.length !== 1 ? "s" : ""}` : ""}`}
                         >
                             {dayNum}
-                            {uniqueTypes.length > 0 && (
-                                <div className={styles.monthDayDots}>
-                                    {uniqueTypes.slice(0, 4).map((t) => (
-                                        <span
-                                            key={t}
-                                            className={styles.monthDayDot}
-                                        />
-                                    ))}
-                                </div>
-                            )}
+                            <div className={styles.monthDayDots}>
+                                {uniqueTypes.slice(0, 4).map((t) => (
+                                    <span
+                                        key={t}
+                                        className={styles.monthDayDot}
+                                    />
+                                ))}
+                                {dayEvents.slice(0, 2).map((evt) => (
+                                    <span
+                                        key={evt.id}
+                                        className={styles.monthDayDotEvent}
+                                        title={evt.title}
+                                    />
+                                ))}
+                            </div>
                         </button>
                     );
                 })}
@@ -406,6 +468,7 @@ type ViewMode = "week" | "month";
 
 export default function CalendarPage() {
     const todayStr = toDateStr(new Date());
+    const { events: stressEvents } = useStressCalendar();
     const [view, setView] = useState<ViewMode>("week");
     const [weekStart, setWeekStart] = useState(() => getWeekStart(todayStr));
     const [monthYear, setMonthYear] = useState(() => {
@@ -461,8 +524,13 @@ export default function CalendarPage() {
             <div className={styles.header}>
                 <h1 className={styles.title}>Meal Calendar</h1>
                 <p className={styles.subtitle}>
-                    Plan your meals for the week ahead
+                    Plan your meals and track upcoming events
                 </p>
+            </div>
+
+            {/* Event Input — add upcoming events directly on the calendar page */}
+            <div className={styles.eventInputWrap}>
+                <EventInput />
             </div>
 
             {/* Toolbar */}
@@ -518,6 +586,7 @@ export default function CalendarPage() {
                     weekStart={weekStart}
                     today={todayStr}
                     onAddClick={handleAddClick}
+                    stressEvents={stressEvents}
                 />
             )}
             {view === "month" && (
@@ -526,6 +595,7 @@ export default function CalendarPage() {
                     month={monthYear.month}
                     today={todayStr}
                     onDayClick={handleMonthDayClick}
+                    stressEvents={stressEvents}
                 />
             )}
 

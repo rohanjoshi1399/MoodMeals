@@ -1,6 +1,7 @@
 "use client";
 
 import React, { ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { findGlossaryEntry, GlossaryEntry } from "../data/glossary";
 import styles from "./GlossaryTerm.module.css";
 
@@ -28,17 +29,33 @@ interface InnerProps {
     entry: GlossaryEntry;
 }
 
+interface TooltipPos {
+    top: number;
+    left: number;
+    above: boolean;
+}
+
 const GlossaryTermInner = ({ children, entry }: InnerProps) => {
     const [show, setShow] = useState(false);
-    const [above, setAbove] = useState(true);
+    const [pos, setPos] = useState<TooltipPos | null>(null);
     const wrapperRef = useRef<HTMLSpanElement>(null);
     const tooltipRef = useRef<HTMLSpanElement>(null);
+    const [mounted, setMounted] = useState(false);
+
+    // We need to know when we're in the browser for createPortal
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     const updatePosition = useCallback(() => {
         if (!wrapperRef.current) return;
         const rect = wrapperRef.current.getBoundingClientRect();
-        // If the wrapper is within the top 120px of the viewport, show tooltip below
-        setAbove(rect.top > 120);
+        const above = rect.top > 160;
+        setPos({
+            top: above ? rect.top - 8 : rect.bottom + 8,
+            left: rect.left + rect.width / 2,
+            above,
+        });
     }, []);
 
     const handleMouseEnter = useCallback(() => {
@@ -82,8 +99,40 @@ const GlossaryTermInner = ({ children, entry }: InnerProps) => {
         };
     }, [show]);
 
-    const posClass = above ? styles.tooltipAbove : styles.tooltipBelow;
-    const visClass = show ? styles.visible : "";
+    // Recalculate position on scroll/resize while visible
+    useEffect(() => {
+        if (!show) return;
+        const recalc = () => updatePosition();
+        window.addEventListener("scroll", recalc, true);
+        window.addEventListener("resize", recalc);
+        return () => {
+            window.removeEventListener("scroll", recalc, true);
+            window.removeEventListener("resize", recalc);
+        };
+    }, [show, updatePosition]);
+
+    const tooltip = show && pos && mounted
+        ? createPortal(
+              <span
+                  ref={tooltipRef}
+                  id={`glossary-${entry.term}`}
+                  className={`${styles.tooltipPortal} ${styles.visible}`}
+                  role="tooltip"
+                  style={{
+                      position: "fixed",
+                      zIndex: 9999,
+                      top: pos.above ? undefined : pos.top,
+                      bottom: pos.above ? `calc(100vh - ${pos.top}px)` : undefined,
+                      left: pos.left,
+                      transform: "translateX(-50%)",
+                  }}
+              >
+                  <span className={styles.termLabel}>{entry.term}</span>
+                  <span className={styles.definition}>{entry.definition}</span>
+              </span>,
+              document.body,
+          )
+        : null;
 
     return (
         <span
@@ -97,15 +146,8 @@ const GlossaryTermInner = ({ children, entry }: InnerProps) => {
             aria-describedby={show ? `glossary-${entry.term}` : undefined}
         >
             {children}
-            <span
-                ref={tooltipRef}
-                id={`glossary-${entry.term}`}
-                className={`${styles.tooltip} ${posClass} ${visClass}`}
-                role="tooltip"
-            >
-                <span className={styles.termLabel}>{entry.term}</span>
-                <span className={styles.definition}>{entry.definition}</span>
-            </span>
+            <span className={styles.infoIcon} aria-hidden="true">&#9432;</span>
+            {tooltip}
         </span>
     );
 };

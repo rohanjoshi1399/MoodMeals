@@ -76,18 +76,34 @@ const ALLERGY_TO_INTOLERANCE: Record<AllergyType, string> = {
 };
 
 const NUTRIENT_PARAM_MAP: Record<string, { param: string; minValue: string }> = {
-    magnesium: { param: "minMagnesium", minValue: "50" },
-    iron: { param: "minIron", minValue: "3" },
-    zinc: { param: "minZinc", minValue: "2" },
-    "vitamin-b6": { param: "minVitaminB6", minValue: "0.3" },
-    "vitamin-b12": { param: "minVitaminB12", minValue: "1" },
-    "vitamin-c": { param: "minVitaminC", minValue: "15" },
+    magnesium: { param: "minMagnesium", minValue: "80" },
+    iron: { param: "minIron", minValue: "5" },
+    zinc: { param: "minZinc", minValue: "4" },
+    "vitamin-b6": { param: "minVitaminB6", minValue: "0.5" },
+    "vitamin-b12": { param: "minVitaminB12", minValue: "2" },
+    "vitamin-c": { param: "minVitaminC", minValue: "30" },
     "vitamin-d": { param: "minVitaminD", minValue: "5" },
     "vitamin-e": { param: "minVitaminE", minValue: "2" },
-    folate: { param: "minFolate", minValue: "50" },
-    tryptophan: { param: "minProtein", minValue: "15" },
+    folate: { param: "minFolate", minValue: "100" },
+    tryptophan: { param: "minProtein", minValue: "25" },
     dha: { param: "minFat", minValue: "10" },
     polyphenols: { param: "minFiber", minValue: "5" },
+};
+
+const CLINICAL_QUERY: Record<string, string> = {
+    "high-stress": "calming comfort food magnesium",
+    "cognitive-fatigue": "brain food iron omega",
+    depressive: "mood boosting serotonin",
+    "poor-focus": "brain food concentration",
+    burnout: "antioxidant recovery",
+};
+
+const CLINICAL_SORT: Record<string, string> = {
+    "high-stress": "healthiness",
+    "cognitive-fatigue": "max-used-ingredients",
+    depressive: "popularity",
+    "poor-focus": "healthiness",
+    burnout: "max-used-ingredients",
 };
 
 const CLINICAL_MOOD_TAGS: Record<string, string[]> = {
@@ -377,14 +393,18 @@ export async function GET(req: NextRequest) {
     // Build Spoonacular query
     const params = new URLSearchParams({
         apiKey,
-        number: "8",
+        number: "20",
         addRecipeNutrition: "true",
         addRecipeInformation: "true",
         fillIngredients: "true",
-        sort: "healthiness",
+        sort: CLINICAL_SORT[clinicalState] ?? "healthiness",
         sortDirection: "desc",
         instructionsRequired: "true",
     });
+
+    // Add mood-specific search query for more relevant results
+    const moodQuery = CLINICAL_QUERY[clinicalState];
+    if (moodQuery) params.set("query", moodQuery);
 
     const diet = PREFERENCE_TO_DIET[preference];
     if (diet) params.set("diet", diet);

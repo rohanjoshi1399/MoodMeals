@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect } from "react";
+import { useRef, useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useMood } from "@/context/MoodContext";
 import { useJournal } from "@/context/JournalContext";
@@ -10,7 +10,6 @@ import MoodInput from "@/components/MoodInput";
 import MealLibrary from "@/components/MealLibrary";
 import { OnboardingBanner, SignInPrompt } from "@/components/Onboarding";
 import StressInterventionBanner from "@/components/StressInterventionBanner";
-import EventInput from "@/components/EventInput";
 import ReflectionPrompt from "@/components/ReflectionPrompt";
 import styles from "./page.module.css";
 
@@ -27,21 +26,24 @@ function FlowStepper({ step }: { step: 1 | 2 | 3 }) {
         <div className={styles.stepper} aria-label="Progress">
             <StepNode
                 num={1}
-                label="Check In"
+                label="Share Your Mood"
+                subtitle="Tell us how you feel"
                 state={step > 1 ? "done" : step === 1 ? "active" : "inactive"}
                 href="#mood-input"
             />
             <div className={`${styles.stepLine} ${step > 1 ? styles.stepLineDone : ""}`} />
             <StepNode
                 num={2}
-                label="Pick Meals"
+                label="Get Recommendations"
+                subtitle="AI-matched meals"
                 state={step > 2 ? "done" : step === 2 ? "active" : "inactive"}
                 href="#recipes"
             />
             <div className={`${styles.stepLine} ${step > 2 ? styles.stepLineDone : ""}`} />
             <StepNode
                 num={3}
-                label="Grocery List"
+                label="Plan & Shop"
+                subtitle="Build your list"
                 state={step === 3 ? "active" : "inactive"}
                 href="/app/grocery"
                 isLink
@@ -51,10 +53,11 @@ function FlowStepper({ step }: { step: 1 | 2 | 3 }) {
 }
 
 function StepNode({
-    num, label, state, href, isLink,
+    num, label, subtitle, state, href, isLink,
 }: {
     num: number;
     label: string;
+    subtitle?: string;
     state: "active" | "done" | "inactive";
     href: string;
     isLink?: boolean;
@@ -77,6 +80,7 @@ function StepNode({
         <div className={styles.stepNode}>
             {circle}
             {label_}
+            {subtitle && <span className={`${styles.stepSubtitle} ${state === "inactive" ? styles.stepLabelInactive : ""}`}>{subtitle}</span>}
         </div>
     );
 
@@ -95,10 +99,11 @@ function StepNode({
 
 export default function AppDashboard() {
     const { analysis } = useMood();
-    const { addEntry } = useJournal();
+    const { addEntry, entries } = useJournal();
     const grocery = useGroceryOptional();
     const userCtx = useUserOptional();
     const lastSavedKeyRef = useRef<string | null>(null);
+    const lastSavedTimeRef = useRef<number>(0);
 
     const groceryCount = grocery?.selectedMeals.length ?? 0;
     const user = userCtx?.user ?? null;
@@ -107,21 +112,60 @@ export default function AppDashboard() {
     const isGentleMode = analysis?.clinicalState === "high-stress" || analysis?.clinicalState === "depressive";
     const currentStep: 1 | 2 | 3 = !analysis ? 1 : groceryCount > 0 ? 3 : 2;
 
-    // Ref-based dedup prevents re-saving when analysis object reference changes but content is the same
+    // Contextual guide: show once per analysis
+    const [showGuide, setShowGuide] = useState(false);
+    const guideShownForRef = useRef<string | null>(null);
+
     useEffect(() => {
         if (analysis) {
             const key = `${analysis.emotion}::${analysis.message.slice(0, 30)}`;
-            if (key !== lastSavedKeyRef.current) {
-                lastSavedKeyRef.current = key;
-                addEntry({
-                    emotion: analysis.emotion,
-                    intensity: analysis.intensity,
-                    message: analysis.message,
-                    userInputText: analysis.userInputText,
-                });
+            if (key !== guideShownForRef.current) {
+                guideShownForRef.current = key;
+                setShowGuide(true);
             }
+        } else {
+            setShowGuide(false);
         }
-    }, [analysis, addEntry]);
+    }, [analysis]);
+
+    // Build a full fingerprint for dedup
+    const getFingerprint = useCallback((a: NonNullable<typeof analysis>) =>
+        JSON.stringify({ emotion: a.emotion, message: a.message, userInputText: a.userInputText }),
+    []);
+
+    // Dedup journal entries: full fingerprint + existing-entry check + 5-second cooldown
+    useEffect(() => {
+        if (analysis) {
+            const fingerprint = getFingerprint(analysis);
+
+            // Already saved this exact fingerprint in this session
+            if (fingerprint === lastSavedKeyRef.current) return;
+
+            // Timestamp-based cooldown: ignore if last entry was <5s ago
+            const now = Date.now();
+            if (now - lastSavedTimeRef.current < 5000) return;
+
+            // Check if an entry with the same fingerprint already exists in journal
+            const alreadyExists = entries.some(e =>
+                e.emotion === analysis.emotion &&
+                e.message === analysis.message &&
+                e.userInputText === analysis.userInputText
+            );
+            if (alreadyExists) {
+                lastSavedKeyRef.current = fingerprint;
+                return;
+            }
+
+            lastSavedKeyRef.current = fingerprint;
+            lastSavedTimeRef.current = now;
+            addEntry({
+                emotion: analysis.emotion,
+                intensity: analysis.intensity,
+                message: analysis.message,
+                userInputText: analysis.userInputText,
+            });
+        }
+    }, [analysis, addEntry, entries, getFingerprint]);
 
     const isLoggedIn = !!user;
 
@@ -144,22 +188,9 @@ export default function AppDashboard() {
                 }} />
             )}
 
-            {/* Stress intervention & deadlines — hidden in gentle mode */}
+            {/* Stress intervention — hidden in gentle mode */}
             {!isGentleMode && (
-                <>
-                    <StressInterventionBanner />
-                    <EventInput />
-                </>
-            )}
-
-            {/* Calming banner — gentle mode only */}
-            {isGentleMode && (
-                <div className={styles.gentleCalm}>
-                    <span className={styles.gentleCalmIcon}>🌿</span>
-                    <p className={styles.gentleCalmText}>
-                        We&apos;re here for you. Here are a few simple, nourishing options.
-                    </p>
-                </div>
+                <StressInterventionBanner />
             )}
 
             {/* Greeting banner */}
@@ -179,10 +210,9 @@ export default function AppDashboard() {
                 </p>
             </div>
 
-            {/* Breathe micro-interaction — gentle mode only */}
+            {/* Breathing text — gentle mode only (circle removed per UX feedback) */}
             {isGentleMode && (
                 <div className={styles.breatheWrap}>
-                    <div className={styles.breatheCircle} aria-hidden="true" />
                     <div className={styles.breatheText} aria-label="Breathing exercise: breathe in and out slowly">
                         <span className={styles.breatheTextIn}>Breathe in...</span>
                         <span className={styles.breatheTextOut}>Breathe out...</span>
@@ -195,6 +225,16 @@ export default function AppDashboard() {
                 <MoodInput />
             </div>
 
+            {/* Calming banner — gentle mode only, shown after mood input as contextual message */}
+            {isGentleMode && (
+                <div className={styles.gentleCalm}>
+                    <span className={styles.gentleCalmIcon}>🌿</span>
+                    <p className={styles.gentleCalmText}>
+                        We&apos;re here for you. Here are a few simple, nourishing options.
+                    </p>
+                </div>
+            )}
+
             {/* Step 2 contextual CTA banner — hidden in gentle mode */}
             {!isGentleMode && analysis && groceryCount === 0 && (
                 <div className={styles.ctaBanner}>
@@ -203,14 +243,14 @@ export default function AppDashboard() {
                 </div>
             )}
 
-            {/* Empty state — only shown when no analysis yet */}
-            {!analysis && (
-                <div className={styles.emptyState}>
-                    <div className={styles.emptyEmoji}>🍽️</div>
-                    <p className={styles.emptyHeading}>No recommendations yet</p>
-                    <p className={styles.emptyText}>
-                        Share how you&apos;re feeling above and we&apos;ll suggest meals that support your mood.
-                    </p>
+            {/* Contextual guide — shown once per analysis */}
+            {!isGentleMode && analysis && showGuide && (
+                <div className={styles.contextualGuide}>
+                    <span className={styles.contextualGuideIcon} aria-hidden="true">&#10024;</span>
+                    <span>
+                        Great! We found meals matched to your mood.
+                        Scroll down to explore, or add them to your grocery list.
+                    </span>
                 </div>
             )}
 
