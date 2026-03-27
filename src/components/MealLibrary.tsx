@@ -204,10 +204,17 @@ const MealLibrary = ({ gentleMode = false }: { gentleMode?: boolean }) => {
     const appliedFiltersRef = useRef<string | null>(null);
     useEffect(() => {
         const filters = analysis?.suggestedFilters;
-        if (!filters) return;
-        const key = JSON.stringify(filters);
+        const key = filters ? JSON.stringify(filters) : "none";
         if (key === appliedFiltersRef.current) return;
         appliedFiltersRef.current = key;
+
+        // Reset all filters first so old ones don't persist across analyses
+        setCuisineFilter("all");
+        setDietFilter("all");
+        setCookTimeFilter("all");
+        setMealTypeFilter("all");
+
+        if (!filters) return;
 
         if (filters.maxCookTime) {
             if (filters.maxCookTime <= 20) setCookTimeFilter("quick");

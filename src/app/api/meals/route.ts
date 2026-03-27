@@ -76,18 +76,18 @@ const ALLERGY_TO_INTOLERANCE: Record<AllergyType, string> = {
 };
 
 const NUTRIENT_PARAM_MAP: Record<string, { param: string; minValue: string }> = {
-    magnesium: { param: "minMagnesium", minValue: "80" },
-    iron: { param: "minIron", minValue: "5" },
-    zinc: { param: "minZinc", minValue: "4" },
-    "vitamin-b6": { param: "minVitaminB6", minValue: "0.5" },
-    "vitamin-b12": { param: "minVitaminB12", minValue: "2" },
-    "vitamin-c": { param: "minVitaminC", minValue: "30" },
-    "vitamin-d": { param: "minVitaminD", minValue: "5" },
-    "vitamin-e": { param: "minVitaminE", minValue: "2" },
-    folate: { param: "minFolate", minValue: "100" },
-    tryptophan: { param: "minProtein", minValue: "25" },
-    dha: { param: "minFat", minValue: "10" },
-    polyphenols: { param: "minFiber", minValue: "5" },
+    magnesium: { param: "minMagnesium", minValue: "30" },
+    iron: { param: "minIron", minValue: "2" },
+    zinc: { param: "minZinc", minValue: "1.5" },
+    "vitamin-b6": { param: "minVitaminB6", minValue: "0.2" },
+    "vitamin-b12": { param: "minVitaminB12", minValue: "0.5" },
+    "vitamin-c": { param: "minVitaminC", minValue: "10" },
+    "vitamin-d": { param: "minVitaminD", minValue: "2" },
+    "vitamin-e": { param: "minVitaminE", minValue: "1" },
+    folate: { param: "minFolate", minValue: "30" },
+    tryptophan: { param: "minProtein", minValue: "10" },
+    dha: { param: "minFat", minValue: "5" },
+    polyphenols: { param: "minFiber", minValue: "3" },
 };
 
 const CLINICAL_QUERY: Record<string, string> = {
@@ -506,6 +506,15 @@ export async function GET(req: NextRequest) {
             );
         } catch {
             console.warn("[meals] USDA enrichment failed, using Spoonacular-only data");
+        }
+
+        // If Spoonacular returned 0 results (filters too strict), supplement with curated
+        if (enrichedMeals.length === 0) {
+            return NextResponse.json({
+                meals: getCuratedFallback(preference, allergyList, clinicalState),
+                source: "curated",
+                fallback: true,
+            });
         }
 
         const hasHybrid = enrichedMeals.some((m) => m.dataSource === "hybrid");
