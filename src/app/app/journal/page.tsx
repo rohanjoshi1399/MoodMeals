@@ -72,8 +72,17 @@ export default function JournalPage() {
                                             {entry.intensity}
                                         </span>
                                     </div>
+                                    {entry.userInputText && (
+                                        <p className={styles.entryUserInput}>
+                                            &ldquo;{entry.userInputText}&rdquo;
+                                        </p>
+                                    )}
                                     <p className={styles.entryMessage}>
-                                        &ldquo;{entry.message}&rdquo;
+                                        {entry.userInputText ? (
+                                            <><span className={styles.aiLabel}>AI insight:</span> {entry.message}</>
+                                        ) : (
+                                            <>&ldquo;{entry.message}&rdquo;</>
+                                        )}
                                     </p>
                                     {entry.mealName && (
                                         <div className={styles.entryMeal}>

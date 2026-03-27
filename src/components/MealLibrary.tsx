@@ -7,7 +7,9 @@ import { MEALS } from "../data/meals";
 import type { Meal, MealCuisine, MealDietFocus, MealType } from "../types";
 import { useMood } from "../context/MoodContext";
 import { useGroceryOptional } from "../context/GroceryContext";
+import { usePantry } from "../context/PantryContext";
 import { useUser } from "../context/UserContext";
+
 
 type CookTimeFilter = "all" | "quick" | "medium" | "long";
 
@@ -49,7 +51,10 @@ const isApiMeal = (meal: Meal) => meal.id.startsWith("spoon-");
 const MealLibrary = ({ gentleMode = false }: { gentleMode?: boolean }) => {
     const { analysis, preference, sustainMode } = useMood();
     const grocery = useGroceryOptional();
+    const pantry = usePantry();
     const { user } = useUser();
+
+    const pantryHasItems = pantry.items.length > 0;
     const userAllergies = user?.allergies ?? [];
     const [expandedId, setExpandedId] = useState<string | null>(null);
     const [showAllOverride, setShowAllOverride] = useState(false);
@@ -59,7 +64,6 @@ const MealLibrary = ({ gentleMode = false }: { gentleMode?: boolean }) => {
     const [apiLoading, setApiLoading] = useState(false);
 
     // Granular filter state
-    const [showFilters, setShowFilters] = useState(false);
     const [cuisineFilter, setCuisineFilter] = useState<MealCuisine | "all">("all");
     const [dietFilter, setDietFilter] = useState<MealDietFocus | "all">("all");
     const [cookTimeFilter, setCookTimeFilter] = useState<CookTimeFilter>("all");
@@ -101,7 +105,6 @@ const MealLibrary = ({ gentleMode = false }: { gentleMode?: boolean }) => {
             if (valid.includes(filters.dietFocus)) setDietFilter(filters.dietFocus as MealDietFocus);
         }
 
-        setShowFilters(true);
     }, [analysis?.suggestedFilters]);
 
     const targetMoods = useMemo((): string[] => {
@@ -240,28 +243,23 @@ const MealLibrary = ({ gentleMode = false }: { gentleMode?: boolean }) => {
                     </>
                 )}
 
-                {/* Filters toggle — always accessible */}
-                <div className={styles.filterToggleRow}>
-                    <button
-                        className={`${styles.filterToggleBtn} ${showFilters ? styles.filterToggleBtnActive : ""}`}
-                        onClick={() => setShowFilters((v) => !v)}
-                        aria-expanded={showFilters}
-                    >
-                        <span>⚙ Filters</span>
+                {/* Always-visible filter bar */}
+                <div className={styles.filterBar}>
+                    <div className={styles.filterBarHeader}>
+                        <span className={styles.filterBarTitle}>
+                            Filters
+                            {activeFilterCount > 0 && (
+                                <span className={styles.filterCount}>{activeFilterCount}</span>
+                            )}
+                        </span>
                         {activeFilterCount > 0 && (
-                            <span className={styles.filterCount}>{activeFilterCount}</span>
+                            <button className={styles.clearFiltersLink} onClick={clearFilters}>
+                                Clear all filters
+                            </button>
                         )}
-                        <span className={styles.filterChevron}>{showFilters ? "▲" : "▼"}</span>
-                    </button>
-                    {activeFilterCount > 0 && (
-                        <button className={styles.clearFiltersLink} onClick={clearFilters}>
-                            Clear all filters
-                        </button>
-                    )}
-                </div>
+                    </div>
 
-                {showFilters && (
-                    <div className={styles.filterPanel}>
+                    <div className={styles.filterGrid}>
                         <div className={styles.filterRow}>
                             <span className={styles.filterRowLabel}>Cuisine</span>
                             <div className={styles.chipRow}>
@@ -322,7 +320,7 @@ const MealLibrary = ({ gentleMode = false }: { gentleMode?: boolean }) => {
                             </div>
                         </div>
                     </div>
-                )}
+                </div>
 
                 {userAllergies.length > 0 && (
                     <p className={styles.filterNote}>
@@ -392,7 +390,56 @@ const MealLibrary = ({ gentleMode = false }: { gentleMode?: boolean }) => {
                                 </div>
                                 <div className={styles.cardBody}>
                                     <h3 className={styles.cardTitle}>{meal.name}</h3>
+
+                                    {/* Pantry availability badge */}
+                                    {pantryHasItems && meal.ingredients && meal.ingredients.length > 0 && (() => {
+                                        const inPantryCount = meal.ingredients.filter((ing) => pantry.hasItem(ing.name)).length;
+                                        const total = meal.ingredients.length;
+                                        if (inPantryCount === total) {
+                                            return (
+                                                <span className={`${styles.pantryBadge} ${styles.pantryBadgeFull}`}>
+                                                    ✓ All ingredients available
+                                                </span>
+                                            );
+                                        }
+                                        if (inPantryCount > 0) {
+                                            return (
+                                                <span className={`${styles.pantryBadge} ${styles.pantryBadgePartial}`}>
+                                                    {inPantryCount}/{total} in pantry
+                                                </span>
+                                            );
+                                        }
+                                        return null;
+                                    })()}
+
                                     <p className={styles.cardDesc}>{meal.description}</p>
+
+                                    {/* Ingredients — compact inline list */}
+                                    {meal.ingredients && meal.ingredients.length > 0 && (() => {
+                                        const maxVisible = 5;
+                                        const visible = meal.ingredients.slice(0, maxVisible);
+                                        const hiddenCount = meal.ingredients.length - maxVisible;
+                                        return (
+                                            <p className={styles.ingredientLine}>
+                                                <span className={styles.ingredientLabel}>Ingredients:</span>{" "}
+                                                {visible.map((ing, i) => {
+                                                    const inPantry = pantryHasItems && pantry.hasItem(ing.name);
+                                                    return (
+                                                        <span key={ing.name}>
+                                                            <span className={inPantry ? styles.ingredientInPantry : ""} title={ing.amount || undefined}>
+                                                                {inPantry && "✓ "}{ing.name},
+                                                            </span>
+                                                            {i < visible.length - 1 && <span className={styles.ingredientSep}> · </span>}
+                                                        </span>
+                                                    );
+                                                })}
+                                                {hiddenCount > 0 && (
+                                                    <span className={styles.ingredientSep}> · +{hiddenCount} more</span>
+                                                )}
+                                            </p>
+                                        );
+                                    })()}
+
                                     <div className={styles.cardMeta}>
                                         <span className={`${styles.metaTag} ${styles[`pref-${meal.preference}`]}`}>
                                             {meal.preference === "veg" ? "🥗 Veg" : meal.preference === "vegan" ? "🌱 Vegan" : "🍗 Non-Veg"}

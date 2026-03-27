@@ -2,18 +2,23 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 
+export type PantryUnit = "g" | "kg" | "ml" | "L" | "oz" | "lb" | "cups" | "tbsp" | "tsp" | "pieces" | "bunch" | "";
+
 export interface PantryItem {
     id: string;
     name: string;
     category: "protein" | "grain" | "vegetable" | "dairy" | "spice" | "other";
     addedAt: string;
+    quantity?: number;
+    unit?: PantryUnit;
 }
 
 interface PantryContextType {
     items: PantryItem[];
-    addItem: (name: string, category: PantryItem["category"]) => void;
+    addItem: (name: string, category: PantryItem["category"], quantity?: number, unit?: PantryUnit) => void;
     addItems: (newItems: { name: string; category: PantryItem["category"] }[]) => void;
     removeItem: (id: string) => void;
+    updateItem: (id: string, updates: Partial<PantryItem>) => void;
     hasItem: (name: string) => boolean;
 }
 
@@ -35,15 +40,18 @@ export const PantryProvider = ({ children }: { children: ReactNode }) => {
         } catch { /* ignore */ }
     }, [items]);
 
-    const addItem = useCallback((name: string, category: PantryItem["category"]) => {
+    const addItem = useCallback((name: string, category: PantryItem["category"], quantity?: number, unit?: PantryUnit) => {
         setItems(prev => {
             if (prev.some(i => i.name.toLowerCase() === name.toLowerCase())) return prev;
-            return [...prev, {
+            const item: PantryItem = {
                 id: `${Date.now()}-${Math.random()}`,
                 name,
                 category,
                 addedAt: new Date().toISOString(),
-            }];
+            };
+            if (quantity !== undefined) item.quantity = quantity;
+            if (unit !== undefined && unit !== "") item.unit = unit;
+            return [...prev, item];
         });
     }, []);
 
@@ -66,11 +74,17 @@ export const PantryProvider = ({ children }: { children: ReactNode }) => {
         setItems(prev => prev.filter(i => i.id !== id));
     }, []);
 
+    const updateItem = useCallback((id: string, updates: Partial<PantryItem>) => {
+        setItems(prev => prev.map(item =>
+            item.id === id ? { ...item, ...updates } : item
+        ));
+    }, []);
+
     const hasItem = useCallback((name: string) =>
         items.some(i => i.name.toLowerCase() === name.toLowerCase()), [items]);
 
     return (
-        <PantryContext.Provider value={{ items, addItem, addItems, removeItem, hasItem }}>
+        <PantryContext.Provider value={{ items, addItem, addItems, removeItem, updateItem, hasItem }}>
             {children}
         </PantryContext.Provider>
     );

@@ -12,6 +12,7 @@ import { ReflectionProvider } from "@/context/ReflectionContext";
 import { StressCalendarProvider } from "@/context/StressCalendarContext";
 import { AllergyType } from "@/types";
 import BottomNav from "./BottomNav";
+import AuthGate from "./AuthGate";
 import { XIcon, ArrowLeftIcon } from "./Icons";
 import ThemeToggle from "./ThemeToggle";
 import styles from "./AppShell.module.css";
@@ -234,6 +235,24 @@ function AppHeader() {
     );
 }
 
+function AuthGatedContent({ children }: { children: React.ReactNode }) {
+    const { isLoggedIn } = useUser();
+
+    if (!isLoggedIn) {
+        return <AuthGate />;
+    }
+
+    return (
+        <div className={styles.shell}>
+            <AppHeader />
+            <main className={styles.main}>
+                {children}
+            </main>
+            <BottomNav />
+        </div>
+    );
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
     return (
         <UserProvider>
@@ -243,13 +262,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                         <JournalProvider>
                             <ReflectionProvider>
                                 <StressCalendarProvider>
-                                    <div className={styles.shell}>
-                                        <AppHeader />
-                                        <main className={styles.main}>
-                                            {children}
-                                        </main>
-                                        <BottomNav />
-                                    </div>
+                                    <AuthGatedContent>
+                                        {children}
+                                    </AuthGatedContent>
                                 </StressCalendarProvider>
                             </ReflectionProvider>
                         </JournalProvider>

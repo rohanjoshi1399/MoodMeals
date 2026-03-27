@@ -122,12 +122,30 @@
 .medium { background: var(--warning-bg);  color: var(--warning-text); }
 .high   { background: var(--error-bg);   color: var(--coral); }
 
+.entryUserInput {
+    font-size: 0.95rem;
+    color: var(--text-dark);
+    line-height: 1.6;
+    font-style: italic;
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+
 .entryMessage {
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     color: var(--text-mid);
     line-height: 1.65;
     font-style: italic;
     margin-bottom: 10px;
+}
+
+.aiLabel {
+    font-style: normal;
+    font-weight: 700;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--sage);
 }
 
 .entryMeal {

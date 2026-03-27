@@ -117,6 +117,7 @@ export default function AppDashboard() {
                     emotion: analysis.emotion,
                     intensity: analysis.intensity,
                     message: analysis.message,
+                    userInputText: analysis.userInputText,
                 });
             }
         }

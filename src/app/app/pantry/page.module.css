@@ -77,6 +77,57 @@
     opacity: 0.7;
 }
 
+/* ── Quantity input in add row ── */
+.qtyInput {
+    width: 60px;
+    padding: 11px 8px;
+    border: 1.5px solid var(--beige-dark);
+    border-radius: var(--radius-sm);
+    font-size: 0.9rem;
+    font-family: inherit;
+    color: var(--text-dark);
+    background: var(--warm-white);
+    outline: none;
+    text-align: right;
+    transition: border-color var(--transition);
+    -moz-appearance: textfield;
+}
+
+.qtyInput::-webkit-outer-spin-button,
+.qtyInput::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.qtyInput:focus {
+    border-color: var(--sage);
+}
+
+.qtyInput::placeholder {
+    color: var(--text-light);
+    opacity: 0.7;
+    text-align: center;
+}
+
+/* ── Unit dropdown in add row ── */
+.unitSelect {
+    width: 70px;
+    padding: 11px 6px;
+    border: 1.5px solid var(--beige-dark);
+    border-radius: var(--radius-sm);
+    font-size: 0.82rem;
+    font-family: inherit;
+    color: var(--text-mid);
+    background: var(--warm-white);
+    outline: none;
+    cursor: pointer;
+    transition: border-color var(--transition);
+}
+
+.unitSelect:focus {
+    border-color: var(--sage);
+}
+
 .catSelect {
     padding: 11px 14px;
     border: 1.5px solid var(--beige-dark);
@@ -232,8 +283,120 @@
     color: var(--text-dark);
 }
 
+.itemChipEmpty {
+    background: var(--cream);
+    border: 1.5px dashed var(--border);
+    opacity: 0.7;
+}
+
 .itemName {
     font-weight: 500;
+}
+
+.itemNameEmpty {
+    color: var(--text-light);
+}
+
+/* ── Inline quantity display ── */
+.qtyDisplay {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    background: none;
+    border: none;
+    padding: 0 2px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 0.82rem;
+    line-height: 1;
+    border-radius: var(--radius-sm);
+    transition: background var(--transition);
+}
+
+.qtyDisplay:hover {
+    background: rgba(0, 0, 0, 0.06);
+}
+
+.qtyValue {
+    font-weight: 700;
+    color: var(--text-dark);
+}
+
+.qtyUnit {
+    color: var(--text-mid);
+    font-weight: 400;
+    font-size: 0.78rem;
+}
+
+.qtyEmpty {
+    color: var(--text-light);
+}
+
+.emptyLabel {
+    font-size: 0.78rem;
+    font-style: italic;
+    color: var(--text-light);
+    font-weight: 500;
+}
+
+/* ── "Add qty" button on items without quantity ── */
+.addQtyBtn {
+    background: none;
+    border: 1px dashed var(--border);
+    border-radius: var(--radius-sm);
+    padding: 1px 6px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--text-light);
+    cursor: pointer;
+    transition: all var(--transition);
+    font-family: inherit;
+}
+
+.addQtyBtn:hover {
+    border-color: var(--sage);
+    color: var(--sage);
+    background: var(--sage-pale);
+}
+
+/* ── Inline edit controls ── */
+.inlineEdit {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.inlineQtyInput {
+    width: 46px;
+    padding: 2px 4px;
+    border: 1.5px solid var(--sage);
+    border-radius: var(--radius-sm);
+    font-size: 0.82rem;
+    font-family: inherit;
+    color: var(--text-dark);
+    background: var(--warm-white);
+    outline: none;
+    text-align: right;
+    -moz-appearance: textfield;
+}
+
+.inlineQtyInput::-webkit-outer-spin-button,
+.inlineQtyInput::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.inlineUnitSelect {
+    width: 54px;
+    padding: 2px 2px;
+    border: 1.5px solid var(--sage);
+    border-radius: var(--radius-sm);
+    font-size: 0.76rem;
+    font-family: inherit;
+    color: var(--text-mid);
+    background: var(--warm-white);
+    outline: none;
+    cursor: pointer;
 }
 
 .removeBtn {
@@ -252,4 +415,51 @@
 
 .removeBtn:hover {
     color: var(--coral);
+}
+
+/* ── Mobile: stack add form into 2 rows ── */
+@media (max-width: 600px) {
+    .addRow {
+        display: grid;
+        grid-template-columns: 1fr auto auto;
+        gap: 8px;
+    }
+
+    .addInput {
+        grid-column: 1 / -1;
+        min-width: 0;
+    }
+
+    .qtyInput {
+        width: 100%;
+    }
+
+    .unitSelect {
+        width: 100%;
+    }
+
+    .catSelect {
+        grid-column: 1 / -1;
+    }
+
+    .addBtn {
+        grid-column: 1 / -1;
+    }
+}
+
+/* ── Dark mode support ── */
+@media (prefers-color-scheme: dark) {
+    .qtyDisplay:hover {
+        background: rgba(255, 255, 255, 0.08);
+    }
+
+    .inlineQtyInput {
+        background: var(--surface);
+        color: var(--text-dark);
+    }
+
+    .inlineUnitSelect {
+        background: var(--surface);
+        color: var(--text-mid);
+    }
 }

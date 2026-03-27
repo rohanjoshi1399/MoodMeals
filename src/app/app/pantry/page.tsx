@@ -1,8 +1,23 @@
 "use client";
 
-import { useState } from "react";
-import { usePantry, PantryItem } from "@/context/PantryContext";
+import { useState, useRef, useEffect } from "react";
+import { usePantry, PantryItem, PantryUnit } from "@/context/PantryContext";
 import styles from "./page.module.css";
+
+const UNITS: { value: PantryUnit; label: string }[] = [
+    { value: "", label: "—" },
+    { value: "g", label: "g" },
+    { value: "kg", label: "kg" },
+    { value: "ml", label: "ml" },
+    { value: "L", label: "L" },
+    { value: "oz", label: "oz" },
+    { value: "lb", label: "lb" },
+    { value: "cups", label: "cups" },
+    { value: "tbsp", label: "tbsp" },
+    { value: "tsp", label: "tsp" },
+    { value: "pieces", label: "pcs" },
+    { value: "bunch", label: "bunch" },
+];
 
 const QUICK_ADD: { name: string; category: PantryItem["category"] }[] = [
     { name: "Rice", category: "grain" },
@@ -31,16 +46,130 @@ const CATEGORIES: { key: PantryItem["category"]; label: string; icon: string }[]
     { key: "other", label: "Other", icon: "🫙" },
 ];
 
+function InlineQuantityEditor({ item, onSave }: { item: PantryItem; onSave: (qty?: number, unit?: PantryUnit) => void }) {
+    const [editing, setEditing] = useState(false);
+    const [qty, setQty] = useState<string>(item.quantity !== undefined ? String(item.quantity) : "");
+    const [unit, setUnit] = useState<PantryUnit>(item.unit ?? "");
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        if (editing && inputRef.current) {
+            inputRef.current.focus();
+            inputRef.current.select();
+        }
+    }, [editing]);
+
+    // Sync with prop changes
+    useEffect(() => {
+        setQty(item.quantity !== undefined ? String(item.quantity) : "");
+        setUnit(item.unit ?? "");
+    }, [item.quantity, item.unit]);
+
+    const handleSave = () => {
+        setEditing(false);
+        const parsedQty = qty.trim() === "" ? undefined : Number(qty);
+        const finalUnit = unit || undefined;
+        onSave(
+            parsedQty !== undefined && !isNaN(parsedQty) ? parsedQty : undefined,
+            finalUnit
+        );
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === "Enter") handleSave();
+        if (e.key === "Escape") {
+            setEditing(false);
+            setQty(item.quantity !== undefined ? String(item.quantity) : "");
+            setUnit(item.unit ?? "");
+        }
+    };
+
+    const isEmpty = item.quantity === 0;
+
+    if (editing) {
+        return (
+            <span className={styles.inlineEdit} onKeyDown={handleKeyDown}>
+                <input
+                    ref={inputRef}
+                    type="number"
+                    className={styles.inlineQtyInput}
+                    value={qty}
+                    onChange={e => setQty(e.target.value)}
+                    onBlur={handleSave}
+                    min={0}
+                    step="any"
+                    placeholder="qty"
+                    aria-label="Quantity"
+                />
+                <select
+                    className={styles.inlineUnitSelect}
+                    value={unit}
+                    onChange={e => setUnit(e.target.value as PantryUnit)}
+                    aria-label="Unit"
+                >
+                    {UNITS.map(u => (
+                        <option key={u.value} value={u.value}>{u.label}</option>
+                    ))}
+                </select>
+            </span>
+        );
+    }
+
+    if (item.quantity !== undefined) {
+        return (
+            <button
+                type="button"
+                className={`${styles.qtyDisplay} ${isEmpty ? styles.qtyEmpty : ""}`}
+                onClick={() => setEditing(true)}
+                title="Click to edit quantity"
+                aria-label={`Edit quantity: ${item.quantity}${item.unit ?? ""}`}
+            >
+                {isEmpty ? (
+                    <span className={styles.emptyLabel}>empty</span>
+                ) : (
+                    <>
+                        <span className={styles.qtyValue}>{item.quantity}</span>
+                        {item.unit && <span className={styles.qtyUnit}>{item.unit}</span>}
+                    </>
+                )}
+            </button>
+        );
+    }
+
+    return (
+        <button
+            type="button"
+            className={styles.addQtyBtn}
+            onClick={() => setEditing(true)}
+            title="Add quantity"
+            aria-label="Add quantity"
+        >
+            + qty
+        </button>
+    );
+}
+
 export default function PantryPage() {
-    const { items, addItem, removeItem } = usePantry();
+    const { items, addItem, removeItem, updateItem } = usePantry();
     const [query, setQuery] = useState("");
     const [selectedCat, setSelectedCat] = useState<PantryItem["category"]>("other");
+    const [addQty, setAddQty] = useState<string>("");
+    const [addUnit, setAddUnit] = useState<PantryUnit>("");
 
     const handleAdd = () => {
         const name = query.trim();
         if (!name) return;
-        addItem(name, selectedCat);
+        const parsedQty = addQty.trim() === "" ? undefined : Number(addQty);
+        const finalQty = parsedQty !== undefined && !isNaN(parsedQty) ? parsedQty : undefined;
+        const finalUnit: PantryUnit | undefined = addUnit || undefined;
+        addItem(name, selectedCat, finalQty, finalUnit);
         setQuery("");
+        setAddQty("");
+        setAddUnit("");
+    };
+
+    const handleInlineSave = (itemId: string, qty?: number, unit?: PantryUnit) => {
+        updateItem(itemId, { quantity: qty, unit: unit ?? "" });
     };
 
     const availableQuick = QUICK_ADD.filter(
@@ -69,6 +198,27 @@ export default function PantryPage() {
                             onChange={e => setQuery(e.target.value)}
                             onKeyDown={e => e.key === "Enter" && handleAdd()}
                         />
+                        <input
+                            type="number"
+                            className={styles.qtyInput}
+                            placeholder="Qty"
+                            value={addQty}
+                            onChange={e => setAddQty(e.target.value)}
+                            onKeyDown={e => e.key === "Enter" && handleAdd()}
+                            min={0}
+                            step="any"
+                            aria-label="Quantity"
+                        />
+                        <select
+                            className={styles.unitSelect}
+                            value={addUnit}
+                            onChange={e => setAddUnit(e.target.value as PantryUnit)}
+                            aria-label="Unit"
+                        >
+                            {UNITS.map(u => (
+                                <option key={u.value} value={u.value}>{u.label}</option>
+                            ))}
+                        </select>
                         <select
                             className={styles.catSelect}
                             value={selectedCat}
@@ -125,18 +275,30 @@ export default function PantryPage() {
                                         <span className={styles.catCount}>{catItems.length}</span>
                                     </h3>
                                     <div className={styles.itemChips}>
-                                        {catItems.map(item => (
-                                            <div key={item.id} className={styles.itemChip}>
-                                                <span className={styles.itemName}>{item.name}</span>
-                                                <button
-                                                    className={styles.removeBtn}
-                                                    onClick={() => removeItem(item.id)}
-                                                    aria-label={`Remove ${item.name}`}
+                                        {catItems.map(item => {
+                                            const isEmpty = item.quantity === 0;
+                                            return (
+                                                <div
+                                                    key={item.id}
+                                                    className={`${styles.itemChip} ${isEmpty ? styles.itemChipEmpty : ""}`}
                                                 >
-                                                    ×
-                                                </button>
-                                            </div>
-                                        ))}
+                                                    <span className={`${styles.itemName} ${isEmpty ? styles.itemNameEmpty : ""}`}>
+                                                        {item.name}
+                                                    </span>
+                                                    <InlineQuantityEditor
+                                                        item={item}
+                                                        onSave={(qty, unit) => handleInlineSave(item.id, qty, unit)}
+                                                    />
+                                                    <button
+                                                        className={styles.removeBtn}
+                                                        onClick={() => removeItem(item.id)}
+                                                        aria-label={`Remove ${item.name}`}
+                                                    >
+                                                        ×
+                                                    </button>
+                                                </div>
+                                            );
+                                        })}
                                     </div>
                                 </div>
                             );

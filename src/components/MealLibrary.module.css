@@ -340,56 +340,47 @@
     border: 1px solid #f5c4bb;
 }
 
-/* ── Filter toggle row ── */
-.filterToggleRow {
+/* ── Always-visible filter bar ── */
+.filterBar {
+    background: var(--sage-pale);
+    border-radius: var(--radius-md);
+    padding: 12px 16px;
+    margin-bottom: 20px;
+    border: 1px solid var(--border);
+}
+
+.filterBarHeader {
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 14px;
-    margin-bottom: 12px;
-    flex-wrap: wrap;
+    justify-content: space-between;
+    margin-bottom: 10px;
 }
 
-.filterToggleBtn {
+.filterBarTitle {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    padding: 8px 18px;
-    border-radius: 999px;
-    border: 1.5px solid var(--beige-dark);
-    background: transparent;
-    font-size: 0.85rem;
-    font-weight: 600;
+    gap: 8px;
+    font-size: 0.75rem;
+    font-weight: 700;
     color: var(--text-mid);
-    cursor: pointer;
-    transition: all var(--transition);
-}
-
-.filterToggleBtn:hover,
-.filterToggleBtnActive {
-    border-color: var(--sage);
-    color: var(--sage);
-    background: var(--sage-pale);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
 }
 
 .filterCount {
     background: var(--sage);
     color: var(--on-primary);
-    font-size: 0.7rem;
+    font-size: 0.65rem;
     font-weight: 700;
     border-radius: 999px;
     padding: 1px 6px;
-    min-width: 18px;
+    min-width: 16px;
     text-align: center;
-}
-
-.filterChevron {
-    font-size: 0.6rem;
-    opacity: 0.7;
+    line-height: 1.4;
 }
 
 .clearFiltersLink {
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     font-weight: 600;
     color: var(--coral);
     background: none;
@@ -404,39 +395,42 @@
     color: var(--coral-dark);
 }
 
-/* ── Filter panel ── */
-.filterPanel {
-    background: var(--sage-pale);
-    border-radius: var(--radius-md);
-    padding: 16px 20px;
-    margin-bottom: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-    animation: fadeIn 0.18s ease;
+/* 2x2 grid on desktop, stacked on mobile */
+.filterGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 20px;
+}
+
+@media (max-width: 639px) {
+    .filterGrid {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
 }
 
 .filterRow {
     display: flex;
-    align-items: flex-start;
-    gap: 12px;
+    align-items: center;
+    gap: 8px;
+    min-height: 32px;
 }
 
 .filterRowLabel {
-    font-size: var(--text-xs);
+    font-size: 0.7rem;
     font-weight: 700;
     color: var(--text-mid);
     text-transform: uppercase;
     letter-spacing: 0.05em;
     white-space: nowrap;
-    min-width: 68px;
-    padding-top: 6px;
+    min-width: 62px;
+    flex-shrink: 0;
 }
 
 .chipRow {
     display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
+    gap: 4px;
+    flex-wrap: nowrap;
     overflow-x: auto;
     scrollbar-width: none;
     -ms-overflow-style: none;
@@ -448,11 +442,11 @@
 }
 
 .chip {
-    padding: 6px 14px;
+    padding: 4px 10px;
     border-radius: 999px;
     border: 1.5px solid var(--beige-dark);
     background: var(--surface);
-    font-size: 0.8rem;
+    font-size: 0.72rem;
     font-weight: 600;
     color: var(--text-mid);
     cursor: pointer;
@@ -731,4 +725,68 @@
     color: var(--text-light);
     text-align: center;
     letter-spacing: 0.02em;
+}
+
+/* ── Pantry availability badge ── */
+.pantryBadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 2px 10px;
+    border-radius: 999px;
+    margin-bottom: 8px;
+    letter-spacing: 0.02em;
+}
+
+.pantryBadgeFull {
+    background: #e2f3e8;
+    color: #2d6a3f;
+    border: 1px solid #b5dcc2;
+}
+
+.pantryBadgePartial {
+    background: #fef3cd;
+    color: #856404;
+    border: 1px solid #ffc107;
+}
+
+@media (prefers-color-scheme: dark) {
+    .pantryBadgeFull {
+        background: rgba(45, 106, 63, 0.25);
+        color: #8dd9a0;
+        border-color: rgba(45, 106, 63, 0.4);
+    }
+
+    .pantryBadgePartial {
+        background: rgba(133, 100, 4, 0.25);
+        color: #ffe082;
+        border-color: rgba(255, 193, 7, 0.4);
+    }
+}
+
+/* ── Ingredient line ── */
+.ingredientLine {
+    font-size: 0.78rem;
+    color: var(--text-light);
+    line-height: 1.5;
+    margin-bottom: 10px;
+}
+
+.ingredientLabel {
+    font-weight: 700;
+    color: var(--text-mid);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.ingredientSep {
+    color: var(--border-strong);
+}
+
+.ingredientInPantry {
+    color: var(--sage-dark, #5f8a6e);
+    font-weight: 600;
 }
