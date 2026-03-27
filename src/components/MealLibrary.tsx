@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import Image from "next/image";
 import styles from "./MealLibrary.module.css";
 import { MEALS } from "../data/meals";
@@ -78,6 +78,31 @@ const MealLibrary = ({ gentleMode = false }: { gentleMode?: boolean }) => {
         setCookTimeFilter("all");
         setMealTypeFilter("all");
     };
+
+    // Auto-apply suggestedFilters from AI analysis
+    const appliedFiltersRef = useRef<string | null>(null);
+    useEffect(() => {
+        const filters = analysis?.suggestedFilters;
+        if (!filters) return;
+        const key = JSON.stringify(filters);
+        if (key === appliedFiltersRef.current) return;
+        appliedFiltersRef.current = key;
+
+        if (filters.maxCookTime) {
+            if (filters.maxCookTime <= 20) setCookTimeFilter("quick");
+            else if (filters.maxCookTime <= 40) setCookTimeFilter("medium");
+        }
+        if (filters.mealType && filters.mealType !== "any") {
+            const valid = ["breakfast", "lunch", "dinner", "snack"];
+            if (valid.includes(filters.mealType)) setMealTypeFilter(filters.mealType as MealType);
+        }
+        if (filters.dietFocus && filters.dietFocus !== "any") {
+            const valid = ["protein-heavy", "fiber-rich", "low-calorie", "balanced"];
+            if (valid.includes(filters.dietFocus)) setDietFilter(filters.dietFocus as MealDietFocus);
+        }
+
+        setShowFilters(true);
+    }, [analysis?.suggestedFilters]);
 
     const targetMoods = useMemo((): string[] => {
         if (!analysis) return [];
@@ -215,29 +240,27 @@ const MealLibrary = ({ gentleMode = false }: { gentleMode?: boolean }) => {
                     </>
                 )}
 
-                {/* More Filters toggle — hidden in gentle mode */}
-                {!(gentleMode && !showAllOverride) && (
-                    <div className={styles.filterToggleRow}>
-                        <button
-                            className={`${styles.filterToggleBtn} ${showFilters ? styles.filterToggleBtnActive : ""}`}
-                            onClick={() => setShowFilters((v) => !v)}
-                            aria-expanded={showFilters}
-                        >
-                            <span>⚙ More Filters</span>
-                            {activeFilterCount > 0 && (
-                                <span className={styles.filterCount}>{activeFilterCount}</span>
-                            )}
-                            <span className={styles.filterChevron}>{showFilters ? "▲" : "▼"}</span>
-                        </button>
+                {/* Filters toggle — always accessible */}
+                <div className={styles.filterToggleRow}>
+                    <button
+                        className={`${styles.filterToggleBtn} ${showFilters ? styles.filterToggleBtnActive : ""}`}
+                        onClick={() => setShowFilters((v) => !v)}
+                        aria-expanded={showFilters}
+                    >
+                        <span>⚙ Filters</span>
                         {activeFilterCount > 0 && (
-                            <button className={styles.clearFiltersLink} onClick={clearFilters}>
-                                Clear all filters
-                            </button>
+                            <span className={styles.filterCount}>{activeFilterCount}</span>
                         )}
-                    </div>
-                )}
+                        <span className={styles.filterChevron}>{showFilters ? "▲" : "▼"}</span>
+                    </button>
+                    {activeFilterCount > 0 && (
+                        <button className={styles.clearFiltersLink} onClick={clearFilters}>
+                            Clear all filters
+                        </button>
+                    )}
+                </div>
 
-                {showFilters && !(gentleMode && !showAllOverride) && (
+                {showFilters && (
                     <div className={styles.filterPanel}>
                         <div className={styles.filterRow}>
                             <span className={styles.filterRowLabel}>Cuisine</span>

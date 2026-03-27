@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, ReactNode } from "react";
 import { MealPreference, MoodAnalysis } from "../types";
 
 export type { MoodAnalysis };
+export type { ClinicalMoodState } from "../types";
 
 export type SustainMode = "sustain" | "winddown" | null;
 

@@ -10,11 +10,18 @@ export interface JournalEntry {
     message: string;
     mealName?: string;
     mealId?: string;
+    userInputText?: string;
+    reflectionEmotion?: string;
+    reflectionIntensity?: "low" | "medium" | "high";
+    reflectionNote?: string;
+    reflectedAt?: string;
 }
 
 interface JournalContextType {
     entries: JournalEntry[];
     addEntry: (entry: Omit<JournalEntry, "id" | "date">) => void;
+    updateEntry: (id: string, updates: Partial<JournalEntry>) => void;
+    getEntry: (id: string) => JournalEntry | undefined;
     clearEntries: () => void;
 }
 
@@ -47,10 +54,21 @@ export const JournalProvider = ({ children }: { children: ReactNode }) => {
         ]);
     }, []);
 
+    const updateEntry = useCallback((id: string, updates: Partial<JournalEntry>) => {
+        setEntries(prev =>
+            prev.map(entry => entry.id === id ? { ...entry, ...updates } : entry)
+        );
+    }, []);
+
+    const getEntry = useCallback(
+        (id: string) => entries.find((e) => e.id === id),
+        [entries]
+    );
+
     const clearEntries = () => setEntries([]);
 
     return (
-        <JournalContext.Provider value={{ entries, addEntry, clearEntries }}>
+        <JournalContext.Provider value={{ entries, addEntry, updateEntry, getEntry, clearEntries }}>
             {children}
         </JournalContext.Provider>
     );

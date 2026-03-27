@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { Meal, MealPreference, AllergyType, MealCuisine, MealDietFocus, MealType, Ingredient } from "@/types";
+import { USDA_NUTRIENT_MAP, USDA_ID_TO_KEY } from "@/data/usda-nutrients";
+import { MEALS as CURATED_MEALS } from "@/data/meals";
 
 // ── Nutrient benefit knowledge base (from nutritional psychiatry research) ──
 
@@ -260,26 +262,117 @@ function stripHtml(html: string): string {
     return html.replace(/<[^>]*>/g, "");
 }
 
+// ── USDA FoodData Central enrichment ──
+
+const USDA_BASE = "https://api.nal.usda.gov/fdc/v1";
+
+function getUSDAKey(): string {
+    return process.env.USDA_API_KEY || "DEMO_KEY";
+}
+
+async function fetchUSDANutrients(ingredientName: string): Promise<Record<string, number>> {
+    const params = new URLSearchParams({
+        api_key: getUSDAKey(),
+        query: ingredientName,
+        pageSize: "1",
+        dataType: "SR Legacy,Foundation",
+    });
+
+    try {
+        const res = await fetch(`${USDA_BASE}/foods/search?${params}`, {
+            next: { revalidate: 86400 }, // Cache 24h
+        });
+        if (!res.ok) return {};
+
+        const data = await res.json();
+        if (!data.foods?.length) return {};
+
+        const profile: Record<string, number> = {};
+        for (const fn of data.foods[0].foodNutrients) {
+            const key = USDA_ID_TO_KEY[fn.nutrientId];
+            if (key) profile[key] = fn.value;
+        }
+        return profile;
+    } catch {
+        return {};
+    }
+}
+
+async function enrichMealWithUSDA(
+    meal: Meal,
+    targetedNutrients: string[],
+): Promise<Meal> {
+    const ingredientNames = meal.ingredients.slice(0, 3).map((i) => i.name);
+    if (ingredientNames.length === 0) return meal;
+
+    const usdaResults = await Promise.all(ingredientNames.map(fetchUSDANutrients));
+
+    const enriched: Record<string, number> = { ...(meal.nutrientProfile ?? {}) };
+    for (const key of targetedNutrients) {
+        for (const result of usdaResults) {
+            if (result[key] && result[key] > (enriched[key] ?? 0)) {
+                enriched[key] = Math.round(result[key] * 100) / 100;
+            }
+        }
+    }
+
+    return {
+        ...meal,
+        nutrientProfile: enriched,
+        dataSource: Object.keys(enriched).length > Object.keys(meal.nutrientProfile ?? {}).length ? "hybrid" : "spoonacular",
+    };
+}
+
+// ── Curated fallback ──
+
+function getCuratedFallback(
+    preference: MealPreference,
+    allergyList: AllergyType[],
+    clinicalState: string,
+): Meal[] {
+    const moodTags = CLINICAL_MOOD_TAGS[clinicalState] ?? ["balanced"];
+
+    return CURATED_MEALS.filter((m) => {
+        // Preference filter (non-exclusive)
+        if (preference === "vegan" && m.preference !== "vegan") return false;
+        if (preference === "veg" && m.preference !== "veg" && m.preference !== "vegan") return false;
+        // Allergy filter
+        if (allergyList.length > 0) {
+            const mealAllergens = m.allergens ?? [];
+            if (allergyList.some((a) => mealAllergens.includes(a))) return false;
+        }
+        return true;
+    }).map((m) => ({
+        ...m,
+        moodSync: m.moodSync.some((tag) => moodTags.includes(tag)) ? m.moodSync : [...m.moodSync, ...moodTags.slice(0, 1)],
+        dataSource: "curated" as const,
+    })).sort((a, b) => {
+        const aScore = a.moodSync.filter((tag) => moodTags.includes(tag)).length;
+        const bScore = b.moodSync.filter((tag) => moodTags.includes(tag)).length;
+        return bScore - aScore;
+    });
+}
+
 // ── Route handler ──
 
 const apiKey = process.env.SPOONACULAR_API_KEY;
 
 export async function GET(req: NextRequest) {
-    if (!apiKey) {
-        return NextResponse.json({ meals: [], source: "no-key", fallback: true });
-    }
-
     const nutrients = req.nextUrl.searchParams.get("nutrients");
     const preference = (req.nextUrl.searchParams.get("preference") ?? "veg") as MealPreference;
     const allergies = req.nextUrl.searchParams.get("allergies");
     const clinicalState = req.nextUrl.searchParams.get("clinicalState") ?? "";
+    const allergyList = allergies ? (allergies.split(",").map((a) => a.trim()) as AllergyType[]) : [];
+
+    if (!apiKey) {
+        return NextResponse.json({ meals: getCuratedFallback(preference, allergyList, clinicalState), source: "curated", fallback: true });
+    }
 
     if (!nutrients) {
         return NextResponse.json({ error: "nutrients param required" }, { status: 400 });
     }
 
     const nutrientList = nutrients.split(",").map((n) => n.trim().toLowerCase());
-    const allergyList = allergies ? (allergies.split(",").map((a) => a.trim()) as AllergyType[]) : [];
 
     // Build Spoonacular query
     const params = new URLSearchParams({
@@ -309,8 +402,9 @@ export async function GET(req: NextRequest) {
         const res = await fetch(url, { next: { revalidate: 3600 } });
 
         if (!res.ok) {
-            console.warn(`[meals] Spoonacular returned ${res.status}`);
-            return NextResponse.json({ meals: [], source: "api-error", fallback: true });
+            const body = await res.text().catch(() => "");
+            console.warn(`[meals] Spoonacular returned ${res.status}: ${body.slice(0, 200)}`);
+            return NextResponse.json({ meals: getCuratedFallback(preference, allergyList, clinicalState), source: "curated", fallback: true });
         }
 
         const data = await res.json();
@@ -384,10 +478,25 @@ export async function GET(req: NextRequest) {
             };
         });
 
-        return NextResponse.json({ meals, source: "spoonacular", fallback: false });
+        // USDA enrichment pass — enrich top meals with precise micronutrient data
+        let enrichedMeals = meals;
+        try {
+            enrichedMeals = await Promise.all(
+                meals.map((m) => enrichMealWithUSDA(m, nutrientList))
+            );
+        } catch {
+            console.warn("[meals] USDA enrichment failed, using Spoonacular-only data");
+        }
+
+        const hasHybrid = enrichedMeals.some((m) => m.dataSource === "hybrid");
+        return NextResponse.json({
+            meals: enrichedMeals,
+            source: hasHybrid ? "hybrid" : "spoonacular",
+            fallback: false,
+        });
     } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         console.warn("[meals] Spoonacular fetch failed:", message);
-        return NextResponse.json({ meals: [], source: "fetch-error", fallback: true });
+        return NextResponse.json({ meals: getCuratedFallback(preference, allergyList, clinicalState), source: "curated", fallback: true });
     }
 }

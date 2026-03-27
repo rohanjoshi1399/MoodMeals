@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useJournal } from "@/context/JournalContext";
 import MoodTrendChart from "@/components/MoodTrendChart";
+import MoodCorrelationReport from "@/components/MoodCorrelationReport";
 import styles from "./page.module.css";
 
 const EMOTION_EMOJIS: Record<string, string> = {
@@ -39,6 +40,10 @@ export default function JournalPage() {
 
             <div style={{ padding: "0 24px", maxWidth: 720, margin: "24px auto 0" }}>
                 <MoodTrendChart entries={entries} />
+            </div>
+
+            <div style={{ padding: "0 24px", maxWidth: 720, margin: "24px auto 0" }}>
+                <MoodCorrelationReport entries={entries} />
             </div>
 
             <div className={styles.container}>

@@ -9,6 +9,9 @@ import { useUserOptional } from "@/context/UserContext";
 import MoodInput from "@/components/MoodInput";
 import MealLibrary from "@/components/MealLibrary";
 import { OnboardingBanner, SignInPrompt } from "@/components/Onboarding";
+import StressInterventionBanner from "@/components/StressInterventionBanner";
+import EventInput from "@/components/EventInput";
+import ReflectionPrompt from "@/components/ReflectionPrompt";
 import styles from "./page.module.css";
 
 function getGreeting(): string {
@@ -138,6 +141,10 @@ export default function AppDashboard() {
                 }} />
             )}
 
+            {/* Stress intervention banner */}
+            <StressInterventionBanner />
+            <EventInput />
+
             {/* Greeting banner */}
             <div className={styles.greeting} id="mood-input">
                 <p className={styles.greetingLine}>
@@ -186,6 +193,9 @@ export default function AppDashboard() {
                     <span className={styles.floatingBarArrow}>View Grocery List →</span>
                 </Link>
             )}
+
+            {/* Post-meal reflection prompt */}
+            <ReflectionPrompt />
         </div>
     );
 }

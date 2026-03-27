@@ -8,6 +8,8 @@ import { PantryProvider } from "@/context/PantryContext";
 import { GroceryProvider } from "@/context/GroceryContext";
 import { JournalProvider } from "@/context/JournalContext";
 import { UserProvider, useUser } from "@/context/UserContext";
+import { ReflectionProvider } from "@/context/ReflectionContext";
+import { StressCalendarProvider } from "@/context/StressCalendarContext";
 import { AllergyType } from "@/types";
 import BottomNav from "./BottomNav";
 import { XIcon, ArrowLeftIcon } from "./Icons";
@@ -239,13 +241,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <PantryProvider>
                     <GroceryProvider>
                         <JournalProvider>
-                            <div className={styles.shell}>
-                                <AppHeader />
-                                <main className={styles.main}>
-                                    {children}
-                                </main>
-                                <BottomNav />
-                            </div>
+                            <ReflectionProvider>
+                                <StressCalendarProvider>
+                                    <div className={styles.shell}>
+                                        <AppHeader />
+                                        <main className={styles.main}>
+                                            {children}
+                                        </main>
+                                        <BottomNav />
+                                    </div>
+                                </StressCalendarProvider>
+                            </ReflectionProvider>
                         </JournalProvider>
                     </GroceryProvider>
                 </PantryProvider>

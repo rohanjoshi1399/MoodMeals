@@ -35,6 +35,7 @@ export interface Meal {
     nutrientProfile?: Record<string, number>;
     allergens?: AllergyType[];
     sourceUrl?: string;
+    dataSource?: "curated" | "spoonacular" | "hybrid";
 }
 
 export type ClinicalMoodState = "high-stress" | "cognitive-fatigue" | "depressive" | "poor-focus" | "burnout";
@@ -46,4 +47,36 @@ export interface MoodAnalysis {
     message: string;
     clinicalState?: ClinicalMoodState;
     targetedNutrients?: string[];
+    suggestedFilters?: {
+        cuisinePreference?: string;
+        mealType?: string;
+        maxCookTime?: number;
+        dietFocus?: string;
+    };
+    contextualInsight?: string;
+    userInputText?: string;
+    source?: string;
+}
+
+// ── Calendar & Stress Intervention types ──
+
+export type CalendarEventType = "deadline" | "exam" | "presentation" | "meeting" | "other";
+export type StressLevel = "low" | "medium" | "high";
+export type MealTime = "breakfast" | "lunch" | "dinner" | "snack";
+
+export interface CalendarEvent {
+    id: string;
+    title: string;
+    date: string;
+    time?: string;
+    type: CalendarEventType;
+    stressLevel?: StressLevel;
+}
+
+export interface StressIntervention {
+    event: CalendarEvent;
+    suggestedMealTime: MealTime;
+    targetedNutrients: string[];
+    reason: string;
+    hoursUntilEvent: number;
 }
