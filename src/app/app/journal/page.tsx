@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useJournal } from "@/context/JournalContext";
+import WellnessProgress from "@/components/WellnessProgress";
 import MoodTrendChart from "@/components/MoodTrendChart";
 import MoodCorrelationReport from "@/components/MoodCorrelationReport";
 import styles from "./page.module.css";
@@ -36,6 +37,10 @@ export default function JournalPage() {
                 <p className={styles.subtitle}>
                     Your mood history — see how your emotions connect to your meals.
                 </p>
+            </div>
+
+            <div style={{ padding: "0 24px", maxWidth: 720, margin: "24px auto 0" }}>
+                <WellnessProgress />
             </div>
 
             <div style={{ padding: "0 24px", maxWidth: 720, margin: "24px auto 0" }}>

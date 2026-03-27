@@ -155,11 +155,53 @@
     padding: 24px;
 }
 
+/* ── Card title row with share button ── */
+.cardTitleRow {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
 .cardTitle {
     font-size: 1.2rem;
     font-weight: 700;
-    margin-bottom: 8px;
+    margin-bottom: 0;
     color: var(--text-dark);
+    flex: 1;
+    min-width: 0;
+}
+
+.shareBtn {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--text-light);
+    cursor: pointer;
+    transition: all var(--transition);
+    padding: 0;
+    margin-top: 2px;
+}
+
+.shareBtn:hover {
+    color: var(--sage);
+    background: var(--sage-pale);
+}
+
+.shareBtn:active {
+    transform: scale(0.9);
+}
+
+.shareIcon {
+    width: 16px;
+    height: 16px;
 }
 
 .cardDesc {
@@ -842,6 +884,61 @@
     }
 }
 
+/* ── Diet focus badge styles ── */
+.dietFocus {
+    font-weight: 700;
+}
+
+.diet-protein-heavy {
+    color: #9c3a1a;
+    background: #fde4d8;
+    border: 1px solid #f0b89e;
+}
+
+.diet-fiber-rich {
+    color: #7a5c1f;
+    background: #fdf0d0;
+    border: 1px solid #e8cc7a;
+}
+
+.diet-low-calorie {
+    color: #2d7a3f;
+    background: #dff5e4;
+    border: 1px solid #a8dbb5;
+}
+
+.diet-balanced {
+    color: #5a6e5f;
+    background: #e8ede9;
+    border: 1px solid #c1d0c5;
+}
+
+@media (prefers-color-scheme: dark) {
+    .diet-protein-heavy {
+        background: rgba(156, 58, 26, 0.25);
+        color: #f0b89e;
+        border-color: rgba(156, 58, 26, 0.4);
+    }
+
+    .diet-fiber-rich {
+        background: rgba(122, 92, 31, 0.25);
+        color: #e8cc7a;
+        border-color: rgba(122, 92, 31, 0.4);
+    }
+
+    .diet-low-calorie {
+        background: rgba(45, 122, 63, 0.25);
+        color: #a8dbb5;
+        border-color: rgba(45, 122, 63, 0.4);
+    }
+
+    .diet-balanced {
+        background: rgba(90, 110, 95, 0.25);
+        color: #c1d0c5;
+        border-color: rgba(90, 110, 95, 0.4);
+    }
+}
+
 /* ── Effort badge styles ── */
 .effortBadge {
     font-weight: 700;
@@ -884,5 +981,246 @@
         background: rgba(139, 69, 19, 0.25);
         color: #f0c4a0;
         border-color: rgba(139, 69, 19, 0.4);
+    }
+}
+
+/* ── Feature 16: Welcome empty state (pre-analysis) ── */
+.welcomeEmpty {
+    text-align: center;
+    padding: 40px 20px 32px;
+    max-width: 560px;
+    margin: 0 auto 8px;
+}
+
+.welcomeIcon {
+    display: block;
+    font-size: 3rem;
+    margin-bottom: 12px;
+    line-height: 1;
+}
+
+.welcomeHeading {
+    font-family: var(--font-lora), serif;
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text-dark);
+    margin-bottom: 12px;
+}
+
+.welcomeSubtext {
+    font-size: 1rem;
+    color: var(--text-mid);
+    line-height: 1.7;
+    margin-bottom: 24px;
+}
+
+/* Suggestion chips row */
+.suggestionChips {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.suggestionChip {
+    display: inline-block;
+    padding: 8px 18px;
+    border-radius: 999px;
+    background: var(--sage-pale);
+    color: var(--sage);
+    font-size: 0.88rem;
+    font-weight: 600;
+    text-decoration: none;
+    border: 1.5px solid var(--border);
+    transition: all var(--transition);
+    cursor: pointer;
+}
+
+.suggestionChip:hover {
+    background: var(--sage);
+    color: var(--on-primary);
+    border-color: var(--sage);
+}
+
+/* Browse divider */
+.browseDivider {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin: 28px 0 4px;
+}
+
+.browseDivider::before,
+.browseDivider::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+}
+
+.browseDividerText {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-light);
+    white-space: nowrap;
+    text-transform: lowercase;
+    letter-spacing: 0.03em;
+}
+
+/* ── Feature 12: Empty filters fallback ── */
+.emptyFilters {
+    text-align: center;
+    padding: 48px 24px;
+    margin: 32px auto;
+    max-width: 420px;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+}
+
+.emptyFiltersIcon {
+    display: block;
+    font-size: 2.5rem;
+    margin-bottom: 12px;
+    line-height: 1;
+}
+
+.emptyFiltersHeading {
+    font-family: var(--font-lora), serif;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--text-dark);
+    margin-bottom: 8px;
+}
+
+.emptyFiltersText {
+    font-size: 0.92rem;
+    color: var(--text-mid);
+    line-height: 1.6;
+    margin-bottom: 20px;
+}
+
+.emptyFiltersClear {
+    display: inline-block;
+    padding: 10px 28px;
+    border-radius: 999px;
+    border: 1.5px solid var(--sage);
+    background: var(--sage);
+    color: var(--on-primary);
+    font-size: 0.88rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all var(--transition);
+}
+
+.emptyFiltersClear:hover {
+    background: transparent;
+    color: var(--sage);
+}
+
+/* Dark mode adjustments for new empty states */
+@media (prefers-color-scheme: dark) {
+    .suggestionChip {
+        background: rgba(122, 158, 135, 0.15);
+        border-color: rgba(122, 158, 135, 0.3);
+    }
+
+    .suggestionChip:hover {
+        background: var(--sage);
+        color: var(--on-primary);
+        border-color: var(--sage);
+    }
+
+    .emptyFilters {
+        background: var(--surface);
+        border-color: rgba(122, 158, 135, 0.2);
+    }
+
+    .emptyFiltersClear:hover {
+        background: transparent;
+        color: var(--sage);
+    }
+}
+
+/* ── Feature 3: Shared "Why this meal?" banner ── */
+.sharedWhyBanner {
+    background: var(--sage-pale);
+    border-left: 4px solid var(--sage);
+    border-radius: var(--radius-sm, 8px);
+    padding: 16px 20px;
+    margin-top: 16px;
+    margin-bottom: 8px;
+    text-align: left;
+    animation: fadeIn 0.3s ease;
+}
+
+.sharedWhyLabel {
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--sage);
+    margin-bottom: 6px;
+}
+
+.sharedWhyText {
+    font-size: 0.85rem;
+    color: var(--text-mid);
+    line-height: 1.6;
+    margin: 0;
+}
+
+@media (prefers-color-scheme: dark) {
+    .sharedWhyBanner {
+        background: rgba(122, 158, 135, 0.12);
+        border-left-color: var(--sage);
+    }
+}
+
+/* ── Feature 5: "Try this meal" primary CTA ── */
+.tryMealBtn {
+    display: block;
+    width: 100%;
+    margin-top: 16px;
+    padding: 14px 10px;
+    border-radius: var(--radius-sm);
+    border: none;
+    background: var(--sage);
+    color: var(--on-primary);
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all var(--transition);
+    text-align: center;
+    letter-spacing: 0.02em;
+}
+
+.tryMealBtn:hover {
+    transform: scale(1.02);
+    box-shadow: 0 4px 16px rgba(122, 158, 135, 0.35);
+}
+
+.tryMealBtn:active {
+    transform: scale(0.98);
+}
+
+.tryMealBtnAdded {
+    background: var(--sage);
+    opacity: 0.85;
+}
+
+.tryMealBtnAdded:hover {
+    background: var(--coral-dark);
+    opacity: 1;
+}
+
+@media (prefers-color-scheme: dark) {
+    .tryMealBtn {
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    .tryMealBtn:hover {
+        box-shadow: 0 4px 16px rgba(122, 158, 135, 0.4);
     }
 }

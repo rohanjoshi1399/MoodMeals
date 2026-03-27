@@ -20,7 +20,20 @@
       "Bash(python scripts/run.py notebook_manager.py add --url \"https://notebooklm.google.com/notebook/caf639d9-e4c3-4033-8ff2-89bf9813aa7e\" --name \"MoodMeals Engineering & Nutrition Research\" --description \"Multidisciplinary research covering nutritional psychiatry, gut-brain axis, healthcare UX design, PWA architecture, food/nutrition APIs \\(Edamam, Spoonacular, USDA\\), LLM integration for proactive interventions, Canvas LMS integration, student budgeting in Seattle\" --topics \"nutritional-psychiatry,gut-brain-axis,healthcare-ux,pwa,food-apis,llm-integration,student-budgeting,meal-planning,mental-health\")",
       "Bash(python scripts/run.py ask_question.py --question \"Provide the FULL content of the report titled ''Strategic Engineering and Psychological Frameworks for Emotion-Aware Nutritional Systems: The MoodMeals Technical and Clinical Specification''. I need EVERY section, EVERY feature specification, EVERY technical recommendation, and EVERY clinical framework mentioned. Include all API recommendations, all UX patterns, all nutritional science frameworks, all LLM integration strategies, all proactive intervention mechanisms, and all budget-conscious features. Be as comprehensive and detailed as possible - do not summarize, reproduce ALL content.\" --notebook-url \"https://notebooklm.google.com/notebook/caf639d9-e4c3-4033-8ff2-89bf9813aa7e\")",
       "Skill(wizard)",
-      "Skill(wizard:*)"
+      "Skill(wizard:*)",
+      "Bash(npm run:*)",
+      "Read(//c/Users/rjjos/.claude/projects/c--Users-rjjos-Documents-NEU-Hackathon-MoodMeals/memory/**)",
+      "Bash(pip show:*)",
+      "WebSearch",
+      "Bash(claude --version)",
+      "Bash(cp .claude/worktrees/agent-a4e879c7/src/data/usda-nutrients.ts src/data/usda-nutrients.ts)",
+      "Bash(cp .claude/worktrees/agent-a4e879c7/src/data/mood-nutrient-map.ts src/data/mood-nutrient-map.ts)",
+      "Bash(cp .claude/worktrees/agent-a25467db/src/components/MoodCorrelationReport.tsx src/components/MoodCorrelationReport.tsx)",
+      "Bash(cp .claude/worktrees/agent-a25467db/src/components/MoodCorrelationReport.module.css src/components/MoodCorrelationReport.module.css)",
+      "Bash(cp .claude/worktrees/agent-ad116d14/src/components/ReflectionPrompt.tsx src/components/ReflectionPrompt.tsx)",
+      "Bash(cp .claude/worktrees/agent-a9656fbf/src/data/glossary.ts src/data/glossary.ts)",
+      "Bash(cp .claude/worktrees/agent-a9656fbf/src/components/GlossaryTerm.tsx src/components/GlossaryTerm.tsx)",
+      "Bash(cp .claude/worktrees/agent-a9656fbf/src/components/GlossaryTerm.module.css src/components/GlossaryTerm.module.css)"
     ]
   }
 }

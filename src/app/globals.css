@@ -68,46 +68,58 @@
 
 /* ── Dark Theme ── */
 [data-theme="dark"] {
-  --sage: #7a9e87;
-  --sage-dark: #5f8a6e;
-  --sage-light: #3d5c45;
-  --sage-pale: #2a3d30;
-  --beige: #2a2d28;
-  --beige-dark: #222520;
+  /* Sage palette — brighter accents for dark backgrounds */
+  --sage: #8db89a;
+  --sage-dark: #6a9e78;
+  --sage-light: #3a5240;
+  --sage-pale: #1e2d22;
+
+  /* Neutral surfaces */
+  --beige: #2a2e2a;
+  --beige-dark: #3a3e3a;
   --beige-pale: #1e211c;
-  --cream: #191c18;
-  --warm-white: #1a1d19;
+  --cream: #141916;
+  --warm-white: #1c201c;
+
+  /* Accent colors — adjusted for dark bg visibility */
   --coral: #e8836a;
   --coral-dark: #d6725a;
   --coral-light: #9e5a42;
-  --lavender: #b8a9d4;
+  --lavender: #c4b6e0;
   --lavender-pale: #3a3348;
-  --sky: #6a96b8;
-  --text-dark: #e8ece9;
-  --text-mid: #b8c4ba;
-  --text-light: #8a9a8c;
-  --text-secondary: #8a9a8c;
+  --sky: #7faed0;
 
-  --surface: #242824;
-  --surface-elevated: #2c302c;
+  /* Text — WCAG AA contrast on dark surfaces */
+  --text-dark: #e8ede9;
+  --text-mid: #a8b5ab;
+  --text-light: #6b7c6e;
+  --text-secondary: #6b7c6e;
+
+  /* Depth layers — distinct card/modal separation */
+  --surface: #1c201c;
+  --surface-elevated: #242824;
   --background: var(--cream);
   --foreground: var(--text-dark);
 
   --on-primary: #ffffff;
-  --surface-glass: rgba(25, 28, 24, 0.92);
-  --surface-glass-heavy: rgba(25, 28, 24, 0.97);
-  --border: rgba(168, 196, 176, 0.12);
+  --surface-glass: rgba(20, 25, 22, 0.88);
+  --surface-glass-heavy: rgba(20, 25, 22, 0.95);
+
+  /* Borders — subtle sage-tinted edges */
+  --border: rgba(168, 196, 176, 0.1);
   --border-strong: rgba(168, 196, 176, 0.2);
 
-  --error: #e8706a;
-  --error-bg: #3d2220;
-  --warning-bg: #3d3520;
-  --warning-text: #d4b44a;
+  /* Status colors — bright enough for dark bg readability */
+  --error: #ef6b6b;
+  --error-bg: rgba(239, 107, 107, 0.12);
+  --warning-bg: rgba(255, 193, 7, 0.12);
+  --warning-text: #ffd54f;
 
+  /* Shadows — stronger black shadows for depth */
   --shadow-color: 0, 0, 0;
-  --shadow-sm: 0 2px 12px rgba(var(--shadow-color), .2);
-  --shadow-md: 0 8px 32px rgba(var(--shadow-color), .3);
-  --shadow-lg: 0 20px 60px rgba(var(--shadow-color), .4);
+  --shadow-sm: 0 2px 12px rgba(var(--shadow-color), .22);
+  --shadow-md: 0 8px 32px rgba(var(--shadow-color), .32);
+  --shadow-lg: 0 20px 60px rgba(var(--shadow-color), .42);
 }
 
 *,

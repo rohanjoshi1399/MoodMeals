@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
 import styles from "./MealLibrary.module.css";
 import { MEALS } from "../data/meals";
@@ -11,6 +11,7 @@ import { usePantry } from "../context/PantryContext";
 import { useUser } from "../context/UserContext";
 import { BUDGET_ALTERNATIVES } from "../data/budgetTips";
 import GlossaryTerm from "./GlossaryTerm";
+import ShareToast from "./ShareToast";
 
 
 type CookTimeFilter = "all" | "quick" | "medium" | "long";
@@ -60,6 +61,16 @@ function getEffort(meal: Meal): MealEffort {
     return "involved";
 }
 
+/** Diet focus badge display config. */
+function dietFocusBadge(focus: MealDietFocus): { emoji: string; label: string } {
+    switch (focus) {
+        case "protein-heavy": return { emoji: "\uD83D\uDCAA", label: "High Protein" };
+        case "fiber-rich": return { emoji: "\uD83C\uDF3E", label: "Fiber Rich" };
+        case "low-calorie": return { emoji: "\uD83C\uDF43", label: "Low Cal" };
+        case "balanced": return { emoji: "\u2696\uFE0F", label: "Balanced" };
+    }
+}
+
 /** Effort badge display config. */
 function effortBadge(effort: MealEffort): { emoji: string; label: string } {
     switch (effort) {
@@ -106,6 +117,35 @@ const MealLibrary = ({ gentleMode = false }: { gentleMode?: boolean }) => {
     // Dynamic API meals state
     const [apiMeals, setApiMeals] = useState<Meal[]>([]);
     const [apiLoading, setApiLoading] = useState(false);
+
+    // Share toast state
+    const [showShareToast, setShowShareToast] = useState(false);
+    const dismissShareToast = useCallback(() => setShowShareToast(false), []);
+
+    const handleShare = useCallback(async (meal: Meal) => {
+        const shareUrl = window.location.origin + `/app?meal=${meal.id}`;
+        const shareText = `Check out "${meal.name}" on MoodMeals${meal.whyThisMeal ? ` \u2014 ${meal.whyThisMeal.slice(0, 100)}` : ""}`;
+
+        if (typeof navigator !== "undefined" && navigator.share) {
+            try {
+                await navigator.share({
+                    title: meal.name,
+                    text: shareText,
+                    url: shareUrl,
+                });
+                return;
+            } catch {
+                // User cancelled or share failed — fall through to clipboard
+            }
+        }
+
+        try {
+            await navigator.clipboard.writeText(shareUrl);
+            setShowShareToast(true);
+        } catch {
+            // Clipboard API unavailable — do nothing
+        }
+    }, []);
 
     // Low-friction recipe mode state
     const [lowFrictionActive, setLowFrictionActive] = useState(false);
@@ -298,6 +338,18 @@ const MealLibrary = ({ gentleMode = false }: { gentleMode?: boolean }) => {
 
     const apiMealCount = sortedMeals.filter((m) => isApiMeal(m)).length;
 
+    // Feature 3: Deduplicate "Why this meal?" when text is identical across 3+ meals
+    const sharedWhyText = useMemo(() => {
+        if (sortedMeals.length < 3) return null;
+        const first = sortedMeals[0]?.whyThisMeal;
+        if (!first) return null;
+        const checkCount = Math.min(sortedMeals.length, 6);
+        const allSame = sortedMeals.slice(0, checkCount).every(
+            (m) => m.whyThisMeal === first,
+        );
+        return allSame ? first : null;
+    }, [sortedMeals]);
+
     return (
         <section id="recipes" className={styles.section}>
             <div className="container">
@@ -320,12 +372,18 @@ const MealLibrary = ({ gentleMode = false }: { gentleMode?: boolean }) => {
                         )}
                     </div>
                 ) : (
-                    <>
-                        <h2 className={styles.title}>Explore by Choice</h2>
-                        <p className={styles.placeholder}>
-                            ✨ Share how you&apos;re feeling above and we&apos;ll recommend the best meals for your mood.
+                    <div className={styles.welcomeEmpty}>
+                        <span className={styles.welcomeIcon}>🍽️</span>
+                        <h2 className={styles.welcomeHeading}>How are you feeling today?</h2>
+                        <p className={styles.welcomeSubtext}>
+                            Tell us your mood above &mdash; we&apos;ll match you with meals that support how you feel, backed by nutritional science.
                         </p>
-                    </>
+                        <div className={styles.suggestionChips}>
+                            <a href="#mood-input" className={styles.suggestionChip}>I&apos;m stressed about exams</a>
+                            <a href="#mood-input" className={styles.suggestionChip}>Feeling tired and need energy</a>
+                            <a href="#mood-input" className={styles.suggestionChip}>Happy and want something light</a>
+                        </div>
+                    </div>
                 )}
 
                 {/* Filter bar — hidden in gentle mode to reduce decisions */}
@@ -457,6 +515,37 @@ const MealLibrary = ({ gentleMode = false }: { gentleMode?: boolean }) => {
                     </div>
                 )}
 
+                {/* Browse divider when no analysis yet */}
+                {!analysis && sortedMeals.length > 0 && (
+                    <div className={styles.browseDivider}>
+                        <span className={styles.browseDividerText}>or browse all meals</span>
+                    </div>
+                )}
+
+                {/* Empty filters fallback */}
+                {sortedMeals.length === 0 && !apiLoading && (
+                    <div className={styles.emptyFilters}>
+                        <span className={styles.emptyFiltersIcon}>🔍</span>
+                        <h3 className={styles.emptyFiltersHeading}>No meals match your filters</h3>
+                        <p className={styles.emptyFiltersText}>
+                            Try adjusting your filters or clearing them to see more options.
+                        </p>
+                        {activeFilterCount > 0 && (
+                            <button className={styles.emptyFiltersClear} onClick={clearFilters}>
+                                Clear all filters
+                            </button>
+                        )}
+                    </div>
+                )}
+
+                {/* Feature 3: Shared "Why this meal?" banner when text is identical across cards */}
+                {sharedWhyText && (
+                    <div className={styles.sharedWhyBanner}>
+                        <div className={styles.sharedWhyLabel}>Why these meals?</div>
+                        <p className={styles.sharedWhyText}>{sharedWhyText}</p>
+                    </div>
+                )}
+
                 <div className={styles.grid}>
                     {(gentleMode && !showAllOverride ? sortedMeals.slice(0, 3) : sortedMeals).map((meal, idx) => {
                         const isExpanded = expandedId === meal.id || (gentleMode && !showAllOverride && idx === 0);
@@ -491,7 +580,29 @@ const MealLibrary = ({ gentleMode = false }: { gentleMode?: boolean }) => {
                                     )}
                                 </div>
                                 <div className={styles.cardBody}>
-                                    <h3 className={styles.cardTitle}>{meal.name}</h3>
+                                    <div className={styles.cardTitleRow}>
+                                        <h3 className={styles.cardTitle}>{meal.name}</h3>
+                                        <button
+                                            className={styles.shareBtn}
+                                            onClick={() => handleShare(meal)}
+                                            aria-label={`Share ${meal.name}`}
+                                            title="Share recipe"
+                                        >
+                                            <svg
+                                                className={styles.shareIcon}
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                strokeWidth="2"
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                            >
+                                                <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+                                                <polyline points="16 6 12 2 8 6" />
+                                                <line x1="12" y1="2" x2="12" y2="15" />
+                                            </svg>
+                                        </button>
+                                    </div>
 
                                     {/* Pantry availability badge */}
                                     {pantryHasItems && meal.ingredients && meal.ingredients.length > 0 && (() => {
@@ -563,6 +674,14 @@ const MealLibrary = ({ gentleMode = false }: { gentleMode?: boolean }) => {
                                         <span className={`${styles.metaTag} ${styles[`pref-${meal.preference}`]}`}>
                                             {meal.preference === "veg" ? "🥗 Veg" : meal.preference === "vegan" ? "🌱 Vegan" : "🍗 Non-Veg"}
                                         </span>
+                                        {(() => {
+                                            const dfBadge = dietFocusBadge(meal.dietFocus);
+                                            return (
+                                                <span className={`${styles.metaTag} ${styles.dietFocus} ${styles[`diet-${meal.dietFocus}`]}`}>
+                                                    {dfBadge.emoji} {dfBadge.label}
+                                                </span>
+                                            );
+                                        })()}
                                         <span className={styles.metaTag}>🕐 {meal.cookTime}m</span>
                                         <span className={styles.metaTag}>{meal.mealType}</span>
                                         <span className={styles.metaTag}>{meal.cuisine}</span>
@@ -595,18 +714,21 @@ const MealLibrary = ({ gentleMode = false }: { gentleMode?: boolean }) => {
                                         </GlossaryTerm>
                                     </div>
 
-                                    <button
-                                        className={styles.whyToggle}
-                                        onClick={() => setExpandedId(expandedId === meal.id ? null : meal.id)}
-                                        aria-expanded={isExpanded}
-                                    >
-                                        <span>Why this meal?</span>
-                                        <span className={styles.whyChevron}>
-                                            {isExpanded ? "▲" : "▼"}
-                                        </span>
-                                    </button>
+                                    {/* Feature 3: Hide per-card "Why this meal?" when shared banner is shown */}
+                                    {!sharedWhyText && (
+                                        <button
+                                            className={styles.whyToggle}
+                                            onClick={() => setExpandedId(expandedId === meal.id ? null : meal.id)}
+                                            aria-expanded={isExpanded}
+                                        >
+                                            <span>Why this meal?</span>
+                                            <span className={styles.whyChevron}>
+                                                {isExpanded ? "▲" : "▼"}
+                                            </span>
+                                        </button>
+                                    )}
 
-                                    {isExpanded && (
+                                    {!sharedWhyText && isExpanded && (
                                         <div className={styles.whyContent}>
                                             <p className={styles.whyText}>{meal.whyThisMeal}</p>
                                             <div className={styles.nutrients}>
@@ -632,7 +754,22 @@ const MealLibrary = ({ gentleMode = false }: { gentleMode?: boolean }) => {
                                         </a>
                                     )}
 
-                                    {grocery && (
+                                    {/* Feature 5: Prominent CTA on the first meal only */}
+                                    {idx === 0 && analysis && grocery && (
+                                        <button
+                                            className={`${styles.tryMealBtn} ${grocery.hasMeal(meal.id) ? styles.tryMealBtnAdded : ""}`}
+                                            onClick={() =>
+                                                grocery.hasMeal(meal.id)
+                                                    ? grocery.removeMeal(meal.id)
+                                                    : grocery.addMeal(meal)
+                                            }
+                                        >
+                                            {grocery.hasMeal(meal.id) ? "✓ Added to Grocery" : "Try this meal"}
+                                        </button>
+                                    )}
+
+                                    {/* Regular "Add to Grocery" for all other cards (or first card when no analysis) */}
+                                    {grocery && !(idx === 0 && analysis) && (
                                         <button
                                             className={`${styles.addToListBtn} ${grocery.hasMeal(meal.id) ? styles.addedBtn : ""}`}
                                             onClick={() =>
@@ -666,6 +803,8 @@ const MealLibrary = ({ gentleMode = false }: { gentleMode?: boolean }) => {
                     </p>
                 )}
             </div>
+
+            <ShareToast visible={showShareToast} onDismiss={dismissShareToast} />
         </section>
     );
 };
